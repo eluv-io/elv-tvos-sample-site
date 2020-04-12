@@ -12,11 +12,11 @@ npm install
 
 ```
 
-### Edit config.json with your Fabric values.
+### create and edit elv-tvos/config.json with your Fabric values.
 
 ```
 {
-  "configUrl": "https://[FABRIC_URL]/config",
+  "configUrl": "[FABRIC_URL]/config",
   "siteId": "iq__xxxx"
 }
 
