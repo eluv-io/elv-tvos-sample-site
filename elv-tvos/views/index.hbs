@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<document>
+<stackTemplate>
+    <banner>
+        <title>{{display_title}}</title>
+    </banner>
+    <collectionList>
+        {{#each playlists}}
+            <shelf>
+                <section>
+                    <header>
+                        <title>{{name}}</title>
+                    </header>
+                    {{#titles}}
+                        <lockup onselect="playMedia('{{videoUrl}}', 'video')">
+                            <img src="{{posterUrl}}" width="250" height="376" />
+                            <title>{{display_title}}</title>
+                        </lockup>
+                    {{/titles}}
+                </section>
+            </shelf>
+        {{/each}}
+    </collectionList>
+</stackTemplate>
+</document>
