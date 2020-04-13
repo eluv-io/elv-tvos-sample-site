@@ -45,6 +45,11 @@ function playMedia(mediaURL, mediaType) {
     myPlayer.play();
 }
 
+function getHero() {
+    return baseURL + "logo.jpg";
+}
+
+
 App.onLaunch = function(options) {
     console.log("App launch.");
     baseURL = options.BASEURL;

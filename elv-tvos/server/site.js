@@ -38,6 +38,11 @@ module.exports = class Site {
         linkPath: "public/asset_metadata"
       });
 
+      siteInfo.title_logo = this.createLink(
+        siteInfo.baseLinkUrl,
+        "images/title_logo/thumbnail"
+      );
+      
       if(siteInfo.playlists) {
         siteInfo.playlists = await this.loadPlaylists(siteInfo.playlists);
       }

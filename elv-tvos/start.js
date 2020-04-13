@@ -35,10 +35,11 @@ const main = async () => {
   app.set('view engine', 'hbs');
 
   const params = {
+    title_logo: site.siteInfo.title_logo,
     display_title: site.siteInfo.display_title,
     playlists: site.siteInfo.playlists
   };
-  
+
   app.get('/index.hbs', function(req, res) {
     res.render('index', params);
   });
