@@ -17,8 +17,17 @@ npm install
 ```
 {
   "configUrl": "[FABRIC_URL]/config",
-  "siteId": "iq__xxxx"
+  "siteId": "iq__xxxx",
+  "server_port": 4001
 }
+
+```
+
+### Edit Debug.xconfig and Release.xconfig with the server url.
+
+```
+# DEBUG
+TV_BASE_URL = http:\/\/localhost:4001\/
 
 ```
 
