@@ -2,10 +2,14 @@ var express = require('express');
 var exbars = require('exbars');
 var Fabric = require('./server/fabric');
 var Site = require('./server/site');
+var Config = require('./config.json');
 var {JQ,isEmpty} = require('./server/utils')
+
+
 const main = async () => {
-  let configUrl = "https://demov3.net955210.contentfabric.io/config";
-  let siteId = "iq__3iSbvsnE1vdEYQvozg3wPg8i8sgV";
+  let configUrl = Config.configUrl;
+  let siteId = Config.siteId;
+  let server_port = Config.server_port || 4001;
   let privateKey = process.env.PRIVATEKEY;
 
   if(isEmpty(configUrl)){
@@ -45,8 +49,9 @@ const main = async () => {
   });
   
   app.use(express.static('static'));
+  console.log("Server running on port: " + server_port);
   
-  app.listen(3000);
+  app.listen(server_port);
 }
 
 

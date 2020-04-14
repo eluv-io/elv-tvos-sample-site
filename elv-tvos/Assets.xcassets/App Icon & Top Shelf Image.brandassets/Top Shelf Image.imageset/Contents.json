@@ -2,10 +2,12 @@
   "images" : [
     {
       "idiom" : "tv",
+      "filename" : "tvos_topshelf.png",
       "scale" : "1x"
     },
     {
       "idiom" : "tv",
+      "filename" : "tvos_topshelf_2x.png",
       "scale" : "2x"
     },
     {

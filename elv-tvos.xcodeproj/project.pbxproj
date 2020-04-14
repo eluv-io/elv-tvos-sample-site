@@ -16,6 +16,13 @@
 		B08481D12441793800CA062B /* package-lock.json in Resources */ = {isa = PBXBuildFile; fileRef = B08481CB2441793800CA062B /* package-lock.json */; };
 		B08481D22441793800CA062B /* views in Resources */ = {isa = PBXBuildFile; fileRef = B08481CC2441793800CA062B /* views */; };
 		B08481D32441793800CA062B /* server in Resources */ = {isa = PBXBuildFile; fileRef = B08481CD2441793800CA062B /* server */; };
+		B08481D72445A42300CA062B /* tvos_app_icon.png in Resources */ = {isa = PBXBuildFile; fileRef = B08481D42445A42200CA062B /* tvos_app_icon.png */; };
+		B08481D82445A42300CA062B /* tvos_topshelf_wide.png in Resources */ = {isa = PBXBuildFile; fileRef = B08481D52445A42200CA062B /* tvos_topshelf_wide.png */; };
+		B08481D92445A42300CA062B /* tvos_topshelf.png in Resources */ = {isa = PBXBuildFile; fileRef = B08481D62445A42300CA062B /* tvos_topshelf.png */; };
+		B08481DB2445A48000CA062B /* tvos_app_store_icon.png in Resources */ = {isa = PBXBuildFile; fileRef = B08481DA2445A48000CA062B /* tvos_app_store_icon.png */; };
+		B08482072445B61800CA062B /* tvos_topshelf_wide_2x.png in Resources */ = {isa = PBXBuildFile; fileRef = B08482062445B61800CA062B /* tvos_topshelf_wide_2x.png */; };
+		B084820B2445B83E00CA062B /* tvos_app_icon_2x.png in Resources */ = {isa = PBXBuildFile; fileRef = B08482082445B83D00CA062B /* tvos_app_icon_2x.png */; };
+		B084820C2445B83E00CA062B /* tvos_topshelf_2x.png in Resources */ = {isa = PBXBuildFile; fileRef = B08482092445B83E00CA062B /* tvos_topshelf_2x.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,12 +31,21 @@
 		9CB9DC0221AF3355006AACB3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9CB9DC0421AF3355006AACB3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9CB9DC0A21AF33A2006AACB3 /* Server */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Server; sourceTree = "<group>"; };
+		B03C32B424462DFD00CFFC97 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		B03C32B524462E8D00CFFC97 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		B08481C82441793800CA062B /* start.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = start.js; sourceTree = "<group>"; };
 		B08481C92441793800CA062B /* static */ = {isa = PBXFileReference; lastKnownFileType = folder; path = static; sourceTree = "<group>"; };
 		B08481CA2441793800CA062B /* package.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = package.json; sourceTree = "<group>"; };
 		B08481CB2441793800CA062B /* package-lock.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = "package-lock.json"; sourceTree = "<group>"; };
 		B08481CC2441793800CA062B /* views */ = {isa = PBXFileReference; lastKnownFileType = folder; path = views; sourceTree = "<group>"; };
 		B08481CD2441793800CA062B /* server */ = {isa = PBXFileReference; lastKnownFileType = folder; path = server; sourceTree = "<group>"; };
+		B08481D42445A42200CA062B /* tvos_app_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = tvos_app_icon.png; sourceTree = "<group>"; };
+		B08481D52445A42200CA062B /* tvos_topshelf_wide.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = tvos_topshelf_wide.png; sourceTree = "<group>"; };
+		B08481D62445A42300CA062B /* tvos_topshelf.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = tvos_topshelf.png; sourceTree = "<group>"; };
+		B08481DA2445A48000CA062B /* tvos_app_store_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = tvos_app_store_icon.png; sourceTree = "<group>"; };
+		B08482062445B61800CA062B /* tvos_topshelf_wide_2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = tvos_topshelf_wide_2x.png; sourceTree = "<group>"; };
+		B08482082445B83D00CA062B /* tvos_app_icon_2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = tvos_app_icon_2x.png; sourceTree = "<group>"; };
+		B08482092445B83E00CA062B /* tvos_topshelf_2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = tvos_topshelf_2x.png; sourceTree = "<group>"; };
 		D0513C20D051D04000000001 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -47,9 +63,18 @@
 		9CB9DBF321AF3354006AACB3 = {
 			isa = PBXGroup;
 			children = (
+				B03C32B524462E8D00CFFC97 /* Release.xcconfig */,
+				B03C32B424462DFD00CFFC97 /* Debug.xcconfig */,
 				D0513C20D051D04000000001 /* README.md */,
 				9CB9DBFE21AF3354006AACB3 /* elv-tvos */,
 				9CB9DBFD21AF3354006AACB3 /* Products */,
+				B08481D42445A42200CA062B /* tvos_app_icon.png */,
+				B08481D52445A42200CA062B /* tvos_topshelf_wide.png */,
+				B08481D62445A42300CA062B /* tvos_topshelf.png */,
+				B08481DA2445A48000CA062B /* tvos_app_store_icon.png */,
+				B08482062445B61800CA062B /* tvos_topshelf_wide_2x.png */,
+				B08482082445B83D00CA062B /* tvos_app_icon_2x.png */,
+				B08482092445B83E00CA062B /* tvos_topshelf_2x.png */,
 			);
 			sourceTree = "<group>";
 		};
@@ -138,13 +163,20 @@
 			buildActionMask = 2147483647;
 			files = (
 				9CB9DC0321AF3355006AACB3 /* Assets.xcassets in Resources */,
+				B08481D92445A42300CA062B /* tvos_topshelf.png in Resources */,
+				B08481DB2445A48000CA062B /* tvos_app_store_icon.png in Resources */,
+				B08481D72445A42300CA062B /* tvos_app_icon.png in Resources */,
 				9CB9DC0B21AF33A2006AACB3 /* Server in Resources */,
 				B08481CF2441793800CA062B /* static in Resources */,
 				B08481CE2441793800CA062B /* start.js in Resources */,
 				B08481D22441793800CA062B /* views in Resources */,
+				B084820C2445B83E00CA062B /* tvos_topshelf_2x.png in Resources */,
 				B08481D32441793800CA062B /* server in Resources */,
 				B08481D02441793800CA062B /* package.json in Resources */,
 				B08481D12441793800CA062B /* package-lock.json in Resources */,
+				B08482072445B61800CA062B /* tvos_topshelf_wide_2x.png in Resources */,
+				B084820B2445B83E00CA062B /* tvos_app_icon_2x.png in Resources */,
+				B08481D82445A42300CA062B /* tvos_topshelf_wide.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -164,6 +196,7 @@
 /* Begin XCBuildConfiguration section */
 		9CB9DC0521AF3355006AACB3 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = B03C32B424462DFD00CFFC97 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -224,6 +257,7 @@
 		};
 		9CB9DC0621AF3355006AACB3 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = B03C32B524462E8D00CFFC97 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -281,16 +315,18 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = UF8453V5DX;
 				INFOPLIST_FILE = "$(SRCROOT)/elv-tvos/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.PlayingMedia${SAMPLE_CODE_DISAMBIGUATOR}";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.eluvio.tvos-sample-site";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "";
+				PROVISIONING_PROFILE_SPECIFIER = "TVOS Distribution Profile";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
 				TVOS_DEPLOYMENT_TARGET = 12.0;
@@ -302,16 +338,18 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = UF8453V5DX;
 				INFOPLIST_FILE = "$(SRCROOT)/elv-tvos/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.PlayingMedia${SAMPLE_CODE_DISAMBIGUATOR}";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.eluvio.tvos-sample-site";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "";
+				PROVISIONING_PROFILE_SPECIFIER = "TVOS Distribution Profile";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
 				TVOS_DEPLOYMENT_TARGET = 12.0;

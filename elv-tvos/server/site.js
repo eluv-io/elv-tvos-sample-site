@@ -47,9 +47,9 @@ module.exports = class Site {
         siteInfo.playlists = await this.loadPlaylists(siteInfo.playlists);
       }
 
-      console.log('Site Playlists: ' + Utils.JQ(siteInfo.playlists));
+      // console.log('Site Playlists: ' + Utils.JQ(siteInfo.playlists));
       this.siteInfo = siteInfo;
-      console.log("Site loaded.");
+      console.log("Site loaded successfully.");
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Failed to load site:");
