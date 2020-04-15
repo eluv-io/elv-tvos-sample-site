@@ -97,7 +97,8 @@ module.exports = class Site {
                   drms: ["aes-128", "widevine", "clear"]
                 });
 
-                const playoutUrl = (title.playoutOptions.hls.playoutMethods["aes-128"] || title.playoutOptions.hls.playoutMethods.clear).playoutUrl;
+                let playoutUrl = (title.playoutOptions.hls.playoutMethods["aes-128"] || title.playoutOptions.hls.playoutMethods.clear).playoutUrl;
+                playoutUrl = playoutUrl.replace(/player_profile=hls-js/,"player_profile=hls-js-2441");
 
                 title.videoUrl = playoutUrl;
 
