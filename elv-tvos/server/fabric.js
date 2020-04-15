@@ -2,7 +2,8 @@ const { ElvClient } = require('@eluvio/elv-client-js/src/ElvClient');
 
 module.exports = class Fabric {
   async init({configUrl, privateKey}){
-    this.client = await ElvClient.FromConfigurationUrl({ configUrl });
+    let region = "na-west-south";
+    this.client = await ElvClient.FromConfigurationUrl({ configUrl, region });
     console.log('client configured.');
     this.wallet = this.client.GenerateWallet();
     console.log('wallet generated.');
