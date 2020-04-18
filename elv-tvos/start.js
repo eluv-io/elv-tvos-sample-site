@@ -4,7 +4,7 @@ var fs = require('fs')
 
 var Fabric = require('./server/fabric');
 var Site = require('./server/site');
-var Config = require('./static/config.json');
+var Config = require('./config.json');
 var {JQ,isEmpty} = require('./server/utils')
 var Handlebars = require('./static/handlebars.js');
 
