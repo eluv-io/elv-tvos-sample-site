@@ -65,14 +65,18 @@ const main = async () => {
     }
   });
 
+  const appFunc = async function(req, res) {
+    const params = {
+      CONFIG_URL: Config.configUrl
+    };
+    res.type('application/json');
+    res.render('application', params);
+  };
+
   //Serve the application.js template
-  app.get('/application.js', async function(req, res) {
-      const params = {
-        CONFIG_URL: Config.configUrl
-      };
-      res.type('application/json');
-      res.render('application', params);
-  });
+  app.get('/application.js', appFunc);
+  //Fix for older app with malformed urls.
+  app.get('//application.js', appFunc);
   
   app.use(express.static('static'));
 
