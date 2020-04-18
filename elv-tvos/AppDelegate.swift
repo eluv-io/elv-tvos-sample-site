@@ -18,7 +18,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, TVApplicationControllerDe
     // use the following command inside your project folder from the Terminal app: ruby -run -ehttpd . -p9001.
     // See NSAppTransportSecurity for information on using a non-secure server.
     static let tvBaseURL = AppDelegate.infoForKey("TV_BASE_URL");
-    static let tvBootURL = "\(AppDelegate.infoForKey("TV_BASE_URL") ?? "")/application.js"
+    static let tvBootURL = "\(AppDelegate.infoForKey("TV_BASE_URL") ?? "")application.js"
     
     static func infoForKey(_ key: String) -> String? {
             return (Bundle.main.infoDictionary?[key] as? String)?

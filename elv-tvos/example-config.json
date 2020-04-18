@@ -2,5 +2,6 @@
   "configUrl": "https://demov3.net955210.contentfabric.io/config",
   "siteId": "iq__3iSbvsnE1vdEYQvozg3wPg8i8sgV",
   "serverPort": 4001,
-  "serverHost": "http://127.0.0.1"
+  "serverHost": "http://127.0.0.1",
+  "updateInterval": 60000
 }

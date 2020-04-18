@@ -1,0 +1,155 @@
+/*
+JavaScript methods to load data from a server and play the corresponding media.
+Note: This is a template file which serves application.js with injected data.
+*/
+
+var baseURL;
+var nodes;
+var currentHost;
+
+var getJSON = function (url) {
+  return new Promise(function (resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("get", url, true);
+    xhr.responseType = "json";
+    xhr.onload = function () {
+      var status = xhr.status;
+      if (status == 200) {
+        resolve(xhr.response);
+      } else {
+        reject(status);
+      }
+    };
+    xhr.send();
+  });
+};
+
+function loadingTemplate() {
+  var template =
+    "<document><loadingTemplate><activityIndicator><text>Loading</text></activityIndicator></loadingTemplate></document>";
+  var templateParser = new DOMParser();
+  var parsedTemplate = templateParser.parseFromString(
+    template,
+    "application/xml"
+  );
+  navigationDocument.pushDocument(parsedTemplate);
+}
+
+function getDocument(extension) {
+  var templateXHR = new XMLHttpRequest();
+  var url = baseURL + extension;
+  console.log("Loading document: " + url);
+
+  loadingTemplate();
+  templateXHR.responseType = "text";
+  templateXHR.addEventListener(
+    "load",
+    function () {
+      pushPage(templateXHR.responseXML);
+    },
+    false
+  );
+  templateXHR.open("GET", url, true);
+  templateXHR.send();
+}
+
+function getTemplate(extension) {
+  var templateXHR = new XMLHttpRequest();
+  var url = baseURL + extension;
+  console.log("Loading template: " + url);
+
+  loadingTemplate();
+  templateXHR.responseType = "text";
+  templateXHR.addEventListener(
+    "load",
+    function () {
+      pushTemplate(templateXHR.responseText);
+    },
+    false
+  );
+  templateXHR.open("GET", url, true);
+  templateXHR.send();
+}
+
+function pushTemplate(text) {
+  // compile the template
+  var template = Handlebars.compile(text);
+  var resolved = template({ host: currentHost });
+  console.log("Resolved Template: " + resolved);
+  var parser = new DOMParser();
+  var document = parser.parseFromString(resolved, "text/xml");
+
+  pushPage(document);
+}
+
+function pushPage(document) {
+  var currentDoc = getActiveDocument();
+  if (currentDoc.getElementsByTagName("loadingTemplate").item(0) == null) {
+    navigationDocument.pushDocument(document);
+  } else {
+    navigationDocument.replaceDocument(document, currentDoc);
+  }
+}
+
+function playMedia(mediaURL, mediaType) {
+  var singleMediaItem = new MediaItem(mediaType, mediaURL);
+  var mediaList = new Playlist();
+
+  mediaList.push(singleMediaItem);
+  var myPlayer = new Player();
+  myPlayer.playlist = mediaList;
+  myPlayer.play();
+}
+
+function getHero() {
+  return baseURL + "logo.jpg";
+}
+
+App.onLaunch = function (options) {
+  console.log("App launch.");
+  baseURL = options.BASEURL;
+  //Template
+  configUrl = "{{CONFIG_URL}}";
+
+  var javascriptFiles = [`${baseURL}/handlebars.js`];
+
+  evaluateScripts(javascriptFiles, function (success) {
+    if (success) {
+      getJSON(configUrl).then(
+        function (data) {
+          try {
+            console.log("Configuration data: " + JSON.stringify(data, null, 2));
+            nodes = data.network.seed_nodes.fabric_api;
+            console.log("Fabric Nodes: " + JSON.stringify(nodes, null, 2));
+            currentHost = nodes[0];
+            baseURL = options.BASEURL;
+            var extension = "index.hbs";
+            getTemplate(extension);
+          } catch (e) {
+            var alert = createAlert(
+              "Server Error",
+              "There was an error loading the site."
+            );
+            navigationDocument.presentModal(alert);
+            throw "There was an error loading the site.";
+          }
+        },
+        function (status) {
+          var alert = createAlert(
+            "Server Error",
+            "There was an error contacting the server."
+          );
+          navigationDocument.presentModal(alert);
+          throw "There was an error contacting the server..";
+        }
+      );
+    } else {
+      var alert = createAlert(
+        "Evaluate Scripts Error",
+        "There was an error attempting to evaluate the external JavaScript files.\n\n Please check your network connection and try again later."
+      );
+      navigationDocument.presentModal(alert);
+      throw "Playback Example: unable to evaluate scripts.";
+    }
+  });
+};

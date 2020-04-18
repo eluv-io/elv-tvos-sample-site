@@ -14,7 +14,8 @@
     "@eluvio/elv-client-js": "git+https://github.com/eluv-io/elv-client-js.git#51ae48ee3bc7dc8117c7c80da352cc777b4901c4",
     "exbars": "^1.0.4",
     "express": "^4.17.1",
-    "handlebars": "^4.7.5",
+    "express-handlebars": "^4.0.3",
+    "express-hbs": "^2.3.3",
     "urijs": "^1.19.2",
     "url-join": "^4.0.1"
   }

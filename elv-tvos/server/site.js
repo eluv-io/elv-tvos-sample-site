@@ -1,27 +1,22 @@
 
-var Utils = require('./utils');
+var {isEmpty} = require('./utils');
 var URI = require("urijs");
 var UrlJoin = require("url-join");
 
 module.exports = class Site {
-  constructor({fabric, siteId}) {
+  constructor({fabric, siteId, hostTemplate="{{{host}}}"}) {
     this.fabric = fabric;
     this.client = fabric.client;
     this.siteId = siteId;
+    this.hostTemplate = hostTemplate;
   }
 
   async loadSite() {
     try {
-      const availableDRMS = await this.client.AvailableDRMs();
-      this.dashSupported = availableDRMS.includes("widevine");
 
-      this.siteLibraryId = await this.client.ContentObjectLibraryId({objectId: this.siteId});
-
-      const siteName = await this.client.ContentObjectMetadata({
-        libraryId: this.siteLibraryId,
-        objectId: this.siteId,
-        metadataSubtree: "public/name"
-      });
+      if(!this.siteLibraryId){
+        this.siteLibraryId = await this.client.ContentObjectLibraryId({objectId: this.siteId});
+      }
 
       let siteInfo = await this.client.ContentObjectMetadata({
         libraryId: this.siteLibraryId,
@@ -29,8 +24,6 @@ module.exports = class Site {
         metadataSubtree: "public/asset_metadata",
         resolveLinks: true
       });
-
-      siteInfo.name = siteName;
 
       siteInfo.baseLinkUrl = await this.client.LinkUrl({
         libraryId: this.siteLibraryId,
@@ -42,14 +35,14 @@ module.exports = class Site {
         siteInfo.baseLinkUrl,
         "images/title_logo/thumbnail"
       );
+
+      siteInfo.title_logo = this.replaceTemplate(siteInfo.title_logo)
       
       if(siteInfo.playlists) {
         siteInfo.playlists = await this.loadPlaylists(siteInfo.playlists);
       }
 
-      // console.log('Site Playlists: ' + Utils.JQ(siteInfo.playlists));
       this.siteInfo = siteInfo;
-      console.log("Site loaded successfully.");
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Failed to load site:");
@@ -89,6 +82,8 @@ module.exports = class Site {
                   "images/main_slider_background_desktop/thumbnail"
                 );
 
+                title.posterUrl = this.replaceTemplate(title.posterUrl);
+
                 title.playoutOptions = await this.client.PlayoutOptions({
                   libraryId: this.siteLibraryId,
                   objectId: this.siteId,
@@ -101,6 +96,8 @@ module.exports = class Site {
                 playoutUrl = playoutUrl.replace(/player_profile=hls-js/,"player_profile=hls-js-2441");
 
                 title.videoUrl = playoutUrl;
+                title.videoUrl = this.replaceTemplate(title.videoUrl);
+
 
                 return title;
               } catch (error) {
@@ -136,5 +133,15 @@ module.exports = class Site {
       .path(UrlJoin(basePath, path))
       .addQuery(query)
       .toString();
+  }
+
+  replaceTemplate(string){
+    if(!isEmpty(this.hostTemplate)){
+      let url = new URI(string).host(this.hostTemplate).scheme('');
+      //Removes the // at the beginning since we removed the scheme
+      return url.href().substr(2);
+    }
+
+    return string;
   }
 }

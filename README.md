@@ -12,13 +12,17 @@ npm install
 
 ```
 
-### create and edit elv-tvos/config.json with your Fabric values.
+### Configuration
+
+Create elv-tvos/config.json or copy example-config.json with your Fabric values.
 
 ```
 {
   "configUrl": "[FABRIC_URL]/config",
   "siteId": "iq__xxxx",
-  "server_port": 4001
+  "serverPort": 4001,
+  "serverHost": "http://127.0.0.1",
+  "updateInterval": 60000
 }
 
 ```
