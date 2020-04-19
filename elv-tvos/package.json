@@ -16,6 +16,7 @@
     "express": "^4.17.1",
     "express-handlebars": "^4.0.3",
     "express-hbs": "^2.3.3",
+    "moment": "^2.24.0",
     "urijs": "^1.19.2",
     "url-join": "^4.0.1"
   }

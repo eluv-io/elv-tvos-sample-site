@@ -6,6 +6,9 @@ Note: This is a template file which serves application.js with injected data.
 var baseURL;
 var nodes;
 var currentHost;
+var configUrl;
+var updateInterval = 60000;
+var launchOptions;
 
 var getJSON = function (url) {
   return new Promise(function (resolve, reject) {
@@ -32,38 +35,39 @@ function loadingTemplate() {
     template,
     "application/xml"
   );
-  navigationDocument.pushDocument(parsedTemplate);
+
+  var currentDoc = getActiveDocument();
+  navigationDocument.replaceDocument(parsedTemplate, currentDoc);
 }
 
-function getDocument(extension) {
-  var templateXHR = new XMLHttpRequest();
-  var url = baseURL + extension;
-  console.log("Loading document: " + url);
-
-  loadingTemplate();
-  templateXHR.responseType = "text";
-  templateXHR.addEventListener(
-    "load",
-    function () {
-      pushPage(templateXHR.responseXML);
-    },
-    false
-  );
-  templateXHR.open("GET", url, true);
-  templateXHR.send();
-}
+var fetch = function (url, responseType) {
+  return new Promise(function (resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("get", url, true);
+    xhr.responseType = responseType;
+    xhr.onload = function () {
+      var status = xhr.status;
+      if (status == 200) {
+        resolve(xhr.response);
+      } else {
+        reject(status);
+      }
+    };
+    xhr.send();
+  });
+};
 
 function getTemplate(extension) {
   var templateXHR = new XMLHttpRequest();
   var url = baseURL + extension;
   console.log("Loading template: " + url);
 
-  loadingTemplate();
+  // loadingTemplate();
   templateXHR.responseType = "text";
   templateXHR.addEventListener(
     "load",
     function () {
-      pushTemplate(templateXHR.responseText);
+      replaceTemplate(templateXHR.responseText);
     },
     false
   );
@@ -78,13 +82,18 @@ function pushTemplate(text) {
   console.log("Resolved Template: " + resolved);
   var parser = new DOMParser();
   var document = parser.parseFromString(resolved, "text/xml");
-
-  pushPage(document);
+  navigationDocument.pushDocument(document);
 }
 
-function pushPage(document) {
+function replaceTemplate(text) {
+  // compile the template
+  var template = Handlebars.compile(text);
+  var resolved = template({ host: currentHost });
+  console.log("Resolved Template: " + resolved);
+  var parser = new DOMParser();
+  var document = parser.parseFromString(resolved, "text/xml");
   var currentDoc = getActiveDocument();
-  if (currentDoc.getElementsByTagName("loadingTemplate").item(0) == null) {
+  if (!currentDoc) {
     navigationDocument.pushDocument(document);
   } else {
     navigationDocument.replaceDocument(document, currentDoc);
@@ -97,6 +106,12 @@ function playMedia(mediaURL, mediaType) {
 
   mediaList.push(singleMediaItem);
   var myPlayer = new Player();
+  myPlayer.addEventListener("stateDidChange", (event) => {
+    console.log("player stateDidChange " + JSON.stringify(event, 0, 2));
+    if (event.state == "end") {
+      setInterval(() => App.reload(), 1000);
+    }
+  });
   myPlayer.playlist = mediaList;
   myPlayer.play();
 }
@@ -105,11 +120,20 @@ function getHero() {
   return baseURL + "logo.jpg";
 }
 
+async function refreshMainPage() {
+  console.log("refreshMainPage");
+  const newDoc = await fetch(baseURL + extension);
+  const oldMain = navigationDocument.documents[0];
+  navigationDocument.replaceDocument(newDoc, oldMain);
+}
+
 App.onLaunch = function (options) {
   console.log("App launch.");
+  launchOptions = options;
   baseURL = options.BASEURL;
   //Template
   configUrl = "{{CONFIG_URL}}";
+  updateInterval = "{{UPDATE_INTERVAL}}";
 
   var javascriptFiles = [`${baseURL}/handlebars.js`];
 
@@ -152,4 +176,8 @@ App.onLaunch = function (options) {
       throw "Playback Example: unable to evaluate scripts.";
     }
   });
+};
+
+App.onWillEnterForeground = function (options) {
+  App.reload();
 };

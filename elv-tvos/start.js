@@ -1,15 +1,14 @@
 var express = require('express');
 var exbars = require('exbars');
-var fs = require('fs')
-
+var moment = require('moment')
 var Fabric = require('./server/fabric');
 var Site = require('./server/site');
 var Config = require('./config.json');
 var {JQ,isEmpty} = require('./server/utils')
-var Handlebars = require('./static/handlebars.js');
 
 var fabric = new Fabric;
 var site = null;
+var date = "";
 
 const refreshSite = async (config) =>{
   let configUrl = config.configUrl;
@@ -29,10 +28,16 @@ const refreshSite = async (config) =>{
     console.error("Please 'export PRIVATEKEY=XXXX' before running.");
     process.exit(1);
   }
-
-  await fabric.init({configUrl,privateKey});
-  site = new Site({fabric, siteId});
-  await site.loadSite();
+  
+  try{
+    await fabric.init({configUrl,privateKey});
+    newSite = new Site({fabric, siteId});
+    await newSite.loadSite();
+    date = moment().format('MM/DD/YYYY h:mm:ss a');
+    site = newSite;
+  }catch(e){
+    console.error(JQ(e));
+  }
 }
 
 const main = async () => {
@@ -45,19 +50,21 @@ const main = async () => {
   app.engine('hbs', exbars({defaultLayout: false}));
   app.set('view engine', 'hbs');
 
-  refreshSite(Config);
+  await refreshSite(Config);
   //Refresh the Site every updateInterval
   setInterval(()=>{refreshSite(Config)}, updateInterval);
 
   //Serve the main tvml template
   app.get('/index.hbs', async function(req, res) {
-    if(site.siteInfo){
+    if(site && site.siteInfo){
       const params = {
         title_logo: site.siteInfo.title_logo,
         display_title: site.siteInfo.display_title,
         playlists: site.siteInfo.playlists,
-        eluvio_logo: serverHost + ":" + serverPort + "/logo.png"
+        eluvio_logo: serverHost + ":" + serverPort + "/logo.png",
+        date
       };
+      res.set('Cache-Control', 'no-cache');
       res.render('index', params);
     }else{
       var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
@@ -67,7 +74,8 @@ const main = async () => {
 
   const appFunc = async function(req, res) {
     const params = {
-      CONFIG_URL: Config.configUrl
+      CONFIG_URL: Config.configUrl,
+      UPDATE_INTERVAL: updateInterval
     };
     res.type('application/json');
     res.render('application', params);
