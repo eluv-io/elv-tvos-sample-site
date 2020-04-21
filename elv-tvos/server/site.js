@@ -4,11 +4,12 @@ var URI = require("urijs");
 var UrlJoin = require("url-join");
 
 module.exports = class Site {
-  constructor({fabric, siteId, hostTemplate="{{{host}}}"}) {
+  constructor({fabric, siteId, hostTemplate="{{{host}}}"}, videoQueryTemplate="{{params}}") {
     this.fabric = fabric;
     this.client = fabric.client;
     this.siteId = siteId;
     this.hostTemplate = hostTemplate;
+    this.videoQueryTemplate = videoQueryTemplate;
   }
 
   async loadSite() {
@@ -96,7 +97,7 @@ module.exports = class Site {
                 playoutUrl = playoutUrl.replace(/player_profile=hls-js/,"player_profile=hls-js-2441");
 
                 title.videoUrl = playoutUrl;
-                title.videoUrl = this.replaceTemplate(title.videoUrl);
+                title.videoUrl = this.replaceTemplate(title.videoUrl,true);
 
 
                 return title;
@@ -135,11 +136,13 @@ module.exports = class Site {
       .toString();
   }
 
-  replaceTemplate(string){
+  replaceTemplate(string,query=false){
     if(!isEmpty(this.hostTemplate)){
       let url = new URI(string).host(this.hostTemplate).scheme('');
       //Removes the // at the beginning since we removed the scheme
-      return url.href().substr(2);
+      url = url.href().substr(2);
+      return !query? url:
+       url + this.videoQueryTemplate;
     }
 
     return string;

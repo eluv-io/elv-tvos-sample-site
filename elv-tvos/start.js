@@ -4,7 +4,7 @@ var moment = require('moment')
 var Fabric = require('./server/fabric');
 var Site = require('./server/site');
 var Config = require('./config.json');
-var {JQ,isEmpty} = require('./server/utils')
+var {JQ,isEmpty,CreateID} = require('./server/utils')
 
 var fabric = new Fabric;
 var site = null;
@@ -73,9 +73,11 @@ const main = async () => {
   });
 
   const appFunc = async function(req, res) {
+    let sessionTag = CreateID(8);
     const params = {
       CONFIG_URL: Config.configUrl,
-      UPDATE_INTERVAL: updateInterval
+      UPDATE_INTERVAL: updateInterval,
+      SESSION_TAG: sessionTag
     };
     res.type('application/json');
     res.render('application', params);
