@@ -91,7 +91,7 @@ function pushTemplate(text) {
 function resolveTemplate(text) {
   // compile the template
   var template = Handlebars.compile(text);
-  var queryParams = `&sessionId=${sessionTag}&appId=${Device.appIdentifier}&appVersion=${Device.appVersion}&systemVersion=${Device.systemVersion}&systemLang=${Settings.language}`;
+  var queryParams = `&session_id=${sessionTag}&app_id=${Device.appIdentifier}&app_version=${Device.appVersion}&system_version=${Device.systemVersion}&system_lang=${Settings.language}`;
   var resolved = template({
     host: currentHost,
     params: queryParams,
