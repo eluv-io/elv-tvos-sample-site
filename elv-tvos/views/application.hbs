@@ -84,21 +84,57 @@ function pushTemplate(text) {
   var resolved = template({ host: currentHost });
   console.log("Resolved Template: " + resolved);
   var parser = new DOMParser();
-  var document = parser.parseFromString(resolved, "text/xml");
+  var document = parser.parseFromString(resolved, "application/xml");
   navigationDocument.pushDocument(document);
 }
 
-function replaceTemplate(text) {
+function resolveTemplate(text) {
   // compile the template
   var template = Handlebars.compile(text);
   var queryParams = `&sessionId=${sessionTag}&appId=${Device.appIdentifier}&appVersion=${Device.appVersion}&systemVersion=${Device.systemVersion}&systemLang=${Settings.language}`;
   var resolved = template({
     host: currentHost,
     params: queryParams,
+    fabric_node: currentHost,
+    app_id: Device.appIdentifier,
+    app_version: Device.appVersion,
+    session_id: sessionTag,
+    system_version: Device.systemVersion,
+    system_lang: Settings.language,
   });
+  return resolved;
+}
+
+function replaceTemplate(text) {
+  let resolved = resolveTemplate(text);
   console.log("Resolved Template: " + resolved);
   var parser = new DOMParser();
-  var document = parser.parseFromString(resolved, "text/xml");
+  var document = parser.parseFromString(resolved, "application/xml");
+  document.addEventListener("select", async (event) => {
+    const target = event.target;
+    const ele = target.parentNode;
+    const feature = ele.getFeature("MenuBarDocument");
+    if (!feature) {
+      return;
+    }
+    try {
+      // Always get a new featureDoc since the old one might be stale from a reload
+      const documentURL = baseURL + target.getAttribute("documentURL");
+      console.log("onSelect for " + documentURL);
+      let docText = await fetch(documentURL, "text");
+      let resolvedText = resolveTemplate(docText);
+      console.log(`Resolved for document: ${documentURL} \n ${resolvedText}`);
+      var featureDoc = parser.parseFromString(resolvedText, "application/xml");
+      feature.setDocument(featureDoc, target);
+      console.log("Document set for menuItem.");
+    } catch (e) {
+      var alert = createAlert(
+        "Page Load Error",
+        "There was an error attempting to load the homepage.\n\n Please check your network connection and try again later."
+      );
+      navigationDocument.presentModal(alert);
+    }
+  });
   var currentDoc = getActiveDocument();
   if (!currentDoc) {
     navigationDocument.pushDocument(document);
@@ -116,7 +152,6 @@ function playMedia(mediaURL, mediaType) {
   myPlayer.addEventListener("stateDidChange", (event) => {
     console.log("player stateDidChange " + JSON.stringify(event, 0, 2));
     if (event.state == "end") {
-      setInterval(() => App.reload(), 1000);
     }
   });
   myPlayer.playlist = mediaList;
@@ -172,7 +207,6 @@ App.onLaunch = function (options) {
             "There was an error contacting the server."
           );
           navigationDocument.presentModal(alert);
-          throw "There was an error contacting the server..";
         }
       );
     } else {
@@ -181,7 +215,6 @@ App.onLaunch = function (options) {
         "There was an error attempting to evaluate the external JavaScript files.\n\n Please check your network connection and try again later."
       );
       navigationDocument.presentModal(alert);
-      throw "Playback Example: unable to evaluate scripts.";
     }
   });
 };

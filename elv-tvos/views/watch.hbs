@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<document>
+<stackTemplate>
+    <collectionList >
+        {{#each playlists}}
+            <shelf>
+                <section>
+                    <header>
+                        <title>{{{name}}}</title>
+                    </header>
+                    {{#titles}}
+                        <lockup onselect="playMedia('{{videoUrl}}', 'video')">
+                            <img src="{{posterUrl}}" width="400" height="240" />
+                            <title>{{display_title}}</title>
+                        </lockup>
+                    {{/titles}}
+                </section>
+            </shelf>
+        {{/each}}
+        <shelf>
+            <section>
+                <header>
+                    <title>Eluvio Test</title>
+                </header>
+                <lockup onselect="playMedia('http://34.67.134.232/fmp4-cbcs-shaka/master.m3u8', 'video')">
+                    <img src="{{eluvio_logo}}" width="400" height="240" />
+                    <title>Eluvio Test 1</title>
+                </lockup>
+            </section>
+        </shelf>
+    </collectionList>
+</stackTemplate>
+</document>

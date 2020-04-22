@@ -94,7 +94,7 @@ module.exports = class Site {
                 });
 
                 let playoutUrl = (title.playoutOptions.hls.playoutMethods.clear || title.playoutOptions.hls.playoutMethods["aes-128"]).playoutUrl;
-                playoutUrl = playoutUrl.replace(/player_profile=hls-js/,"player_profile=hls-js-2441");
+                //playoutUrl = playoutUrl.replace(/player_profile=hls-js/,"player_profile=hls-js-2441");
 
                 title.videoUrl = playoutUrl;
                 title.videoUrl = this.replaceTemplate(title.videoUrl,true);
