@@ -1,7 +1,8 @@
 
-var {isEmpty} = require('./utils');
+var {isEmpty, JQ} = require('./utils');
 var URI = require("urijs");
 var UrlJoin = require("url-join");
+var Id = require("@eluvio/elv-client-js/src/Id");
 
 module.exports = class Site {
   constructor({fabric, siteId, hostTemplate="{{{host}}}"}, videoQueryTemplate="{{params}}") {
@@ -19,11 +20,25 @@ module.exports = class Site {
         this.siteLibraryId = await this.client.ContentObjectLibraryId({objectId: this.siteId});
       }
 
+      const versionHash = await this.client.LatestVersionHash({objectId: this.siteId});
+
       let siteInfo = await this.client.ContentObjectMetadata({
         libraryId: this.siteLibraryId,
         objectId: this.siteId,
         metadataSubtree: "public/asset_metadata",
-        resolveLinks: true
+        resolveLinks: true,
+        resolveIncludeSource: true,
+        resolveIgnoreErrors: true,
+        select: [
+          "title",
+          "display_title",
+          "channels",
+          "episodes",
+          "playlists",
+          "seasons",
+          "series",
+          "titles"
+        ]
       });
 
       siteInfo.baseLinkUrl = await this.client.LinkUrl({
@@ -40,7 +55,7 @@ module.exports = class Site {
       siteInfo.title_logo = this.replaceTemplate(siteInfo.title_logo)
       
       if(siteInfo.playlists) {
-        siteInfo.playlists = await this.loadPlaylists(siteInfo.playlists);
+        siteInfo.playlists = await this.loadPlaylists(versionHash, siteInfo.playlists);
       }
 
       this.siteInfo = siteInfo;
@@ -52,38 +67,31 @@ module.exports = class Site {
     }
   }
 
-  async loadPlaylists(playlistInfo) {
-    // Playlists: {[index]: {[playlist-name]: {[title-key]: { ...title }}}
+  async loadPlaylists(versionHash, playlistInfo) {
+    if(!playlistInfo || Object.keys(playlistInfo).length === 0) { return []; }
     let playlists = [];
+
     await Promise.all(
-      Object.keys(playlistInfo).map(async index => {
+      Object.keys(playlistInfo).map(async playlistSlug => {
         try {
-          const playlistName = Object.keys(playlistInfo[index])[0];
-          const playlistIndex = parseInt(index);
+          const {name, order, list} = playlistInfo[playlistSlug];
 
-          const playlistTitles = await Promise.all(
-            Object.keys(playlistInfo[index][playlistName]).map(async (titleKey, titleIndex) => {
+          let titles = [];
+          await Promise.all(
+            Object.keys(list || {}).map(async titleSlug => {
               try {
-                let title = playlistInfo[index][playlistName][titleKey];
+                let title = list[titleSlug];
 
+                title.displayTitle = title.display_title || title.title || "";
+                title.versionHash = title["."].source;
+                title.objectId = this.client.utils.DecodeVersionHash(title.versionHash).objectId;
+
+                const titleLinkPath = `public/asset_metadata/playlists/${playlistSlug}/list/${titleSlug}`;
+                title.baseLinkPath = titleLinkPath;
                 title.baseLinkUrl =
-                  await this.client.LinkUrl({
-                    libraryId: this.siteLibraryId,
-                    objectId: this.siteId,
-                    linkPath: `public/asset_metadata/playlists/${index}/${playlistName}/${titleKey}`
-                  });
+                  await this.client.LinkUrl({versionHash, linkPath: titleLinkPath});
 
-                title.playoutOptionsLinkPath = `public/asset_metadata/playlists/${index}/${playlistName}/${titleKey}/sources/default`;
-
-                title.playlistIndex = playlistIndex;
-                title.titleIndex = titleIndex;
-
-                title.posterUrl = this.createLink(
-                  title.baseLinkUrl,
-                  "images/main_slider_background_desktop/thumbnail"
-                );
-
-                title.posterUrl = this.replaceTemplate(title.posterUrl);
+                title.playoutOptionsLinkPath = UrlJoin(titleLinkPath, "sources", "default");
 
                 title.playoutOptions = await this.client.PlayoutOptions({
                   libraryId: this.siteLibraryId,
@@ -100,31 +108,68 @@ module.exports = class Site {
                 title.videoUrl = this.replaceTemplate(title.videoUrl,true);
 
 
-                return title;
+                title.titleId = Id.next();
+
+                Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
+
+                titles[parseInt(title.order)] = title;
               } catch (error) {
                 // eslint-disable-next-line no-console
-                console.error(`Failed to load title ${titleIndex} (${titleKey}) in playlist ${index} (${playlistName})`);
+                console.error(`Failed to load title ${titleSlug} in playlist ${order} (${name})`);
                 // eslint-disable-next-line no-console
                 console.error(error);
               }
             })
           );
 
-          playlists[playlistIndex] = {
-            playlistIndex,
-            name: playlistName,
-            titles: playlistTitles.filter(title => title)
+          playlists[parseInt(order)] = {
+            playlistId: Id.next(),
+            name,
+            titles: titles.filter(title => title)
           };
         } catch (error) {
           // eslint-disable-next-line no-console
-          console.error(`Failed to load playlist ${index}`);
+          console.error(`Failed to load playlist ${playlistSlug}`);
           // eslint-disable-next-line no-console
           console.error(error);
         }
       })
     );
-
+    
     return playlists.filter(playlist => playlist);
+  }
+
+  async imageLinks({baseLinkUrl, versionHash, images}) {
+    images = images || {};
+
+    let landscapeUrl, portraitUrl, imageUrl, posterUrl;
+    if(images.landscape) {
+      landscapeUrl = this.createLink(baseLinkUrl, UrlJoin("images", "landscape", "default"));
+    } else if(images.main_slider_background_desktop) {
+      landscapeUrl = this.createLink(baseLinkUrl, UrlJoin("images", "main_slider_background_desktop", "default"));
+    }
+    landscapeUrl = this.replaceTemplate(landscapeUrl);
+
+    if(images.poster) {
+      portraitUrl = this.createLink(baseLinkUrl, UrlJoin("images", "poster", "default"));
+    } else if(images.primary_portrait) {
+      portraitUrl = this.createLink(baseLinkUrl, UrlJoin("images", "primary_portrait", "default"));
+    } else if(images.portrait) {
+      portraitUrl = this.createLink(baseLinkUrl, UrlJoin("images", "portrait", "default"));
+    }
+    portraitUrl = this.replaceTemplate(portraitUrl);
+
+    imageUrl = await this.client.ContentObjectImageUrl({versionHash});
+    imageUrl = this.replaceTemplate(imageUrl);
+
+    posterUrl = landscapeUrl;
+
+    return {
+      posterUrl,
+      landscapeUrl,
+      portraitUrl,
+      imageUrl
+    };
   }
 
   createLink(baseLink, path, query={}) {
@@ -137,6 +182,10 @@ module.exports = class Site {
   }
 
   replaceTemplate(string,query=false){
+    if(isEmpty(string)){
+      return "";
+    }
+
     if(!isEmpty(this.hostTemplate)){
       let url = new URI(string).host(this.hostTemplate).scheme('');
       //Removes the // at the beginning since we removed the scheme
