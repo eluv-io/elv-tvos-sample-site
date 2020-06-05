@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8" ?>
 <document>
    <productTemplate>
       <background>
@@ -8,41 +9,36 @@
                <header>
                   <title>Director</title>
                </header>
-               <text>John Appleseed</text>
+               <text>{{director}}</text>
             </info>
             <info>
                <header>
                   <title>Actors</title>
                </header>
-               <text>Anne Johnson</text>
-               <text>Tom Clark</text>
-               <text>Maria Ruiz</text>
+               {{#each cast}}
+                <text>{{talent_full_name}}</text>
+               {{/each}}
             </info>
          </infoList>
          <stack>
-            <title>WWDC Road Trip</title>
+            <title>{{title.display_title}}</title>
             <row>
-               <text><badge src="resource://tomato-fresh"/> 99%</text>
-               <text>1hr 54min</text>
-               <text>Comedy</text>
-               <text>2015</text>
-               <badge src="resource://mpaa-pg" class="badge" />
-               <badge src="resource://cc" class="badge" />
+               <text>{{length}}</text>
+               <text>{{genre}}</text>
+               <text>{{date}}</text>
             </row>
-            <description handlesOverflow ="true">An aspiring developer gets a ticket to WWDC, but can't afford to fly there. Now he needs to get across country in time for the keynote, and the only person who can help him is his slacker roommate.</description>
+            <description handlesOverflow ="true">{{title.info.synopsis}}</description>
             <text>Language information can go here</text>
             <row>
-               <buttonLockup>
-                  <badge src="resource://button-preview" />
-                  <title>Preview</title>
-               </buttonLockup>
-               <buttonLockup type="buy">
-                  <text>$9.99</text>
-                  <title>Buy</title>
-               </buttonLockup>
+              {{#each offerings}}
+                <buttonLockup onselect="playMedia('{{videoUrl}}','video')">
+                    <badge src="resource://button-preview" />
+                    <title>{{display_name}}</title>
+                </buttonLockup>
+               {{/each}}
             </row>
          </stack>
-         <heroImg src="path to images on your server/Car_Movie_720x1080.png" />
+         <heroImg src="{{title.posterUrl}}" />
       </banner>
   </productTemplate>
 </document>

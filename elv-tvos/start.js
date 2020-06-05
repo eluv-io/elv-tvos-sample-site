@@ -27,20 +27,19 @@ const refreshSites = async (config) =>{
   try{
     await fabric.init({configUrl,privateKey});
     var sitesIds = await fabric.findSites();
-    sites = [];
+    let newSites = [];
     await Promise.all(
       sitesIds.map(async siteId => {
-          console.log("Loading site: " + siteId);
+          // console.log("Loading site: " + siteId);
           let newSite = new Site({fabric, siteId});
           await newSite.loadSite();
           // console.log("Site loaded: " + JQ(newSite.siteInfo));
-          sites.push(newSite.siteInfo);
-          console.log(sites.length);
+          newSites.push(newSite.siteInfo);
       })
     );
     // console.log("Sites: " + JQ(sites));
     date = moment().format('MM/DD/YYYY h:mm:ss a');
-
+    sites = newSites;
   }catch(e){
     console.error(e);
   }
@@ -90,19 +89,68 @@ const main = async () => {
     }
   });
 
-    //Serve the main tvml template
+    //Serve the site tvml template
   app.get(['/site.hbs/:index','/watch.hbs/:index'], async function(req, res) {
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
-      console.log("Route "+ view + "/" + req.params.index);
       let index = req.params.index;
+      // console.log("Route "+ view + "/" + index);
       let site = sites[index];
       const params = {
         title_logo: site.title_logo,
         display_title: site.display_title,
         playlists: site.playlists,
         eluvio_logo: serverHost + ":" + serverPort + "/logo.png",
-        site_index: index,
+        site_index: 0,
+        date
+      };
+
+      res.set('Cache-Control', 'no-cache');
+      res.render(view, params);
+    }catch(e){
+      console.error(e);
+      var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
+      res.send(template, 404);
+    }
+  });
+
+  //Serve the title details tvml template
+  app.get('/detail.hbs/:site_index/:playlist_index/:title_index', async function(req, res) {
+    try {
+      let view = req.path.split('.').slice(0, -1).join('.').substr(1);
+      let title_index = req.params.title_index;
+      let site_index = req.params.site_index;
+      let playlist_index = req.params.playlist_index;
+      let site = sites[site_index];
+      // console.log("Route "+ view + "/" + site_index + "/" + title_index);
+
+      let title = site.playlists[playlist_index].titles[title_index];
+      // console.log("params: " + Object.keys(title.info.talent));
+
+      let director = "";
+      let genre = "";
+      let date = "";
+      let cast = [];
+      let length = "";
+      let offerings = [];
+      try {
+        director = title.info.talent.director[0].talent_full_name;
+        genre = title.info.genre[0];
+        date = title.info.release_date;
+        cast = title.info.talent.cast || [];
+        length = "";
+        offerings = title.availableOfferings || [];
+      }catch(e){
+
+      }
+
+      const params = {
+        director,
+        genre,
+        date,
+        cast,
+        title,
+        offerings,
         date
       };
       res.set('Cache-Control', 'no-cache');

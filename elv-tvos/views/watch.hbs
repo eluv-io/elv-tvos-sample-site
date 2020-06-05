@@ -9,7 +9,7 @@
                         <title>{{{name}}}</title>
                     </header>
                     {{#titles}}
-                        <lockup onselect="playMedia('{{videoUrl}}', 'video')">
+                        <lockup onselect="loadPlaylistTitle({{../../site_index}},{{@../index}},{{@index}})">
                             <img src="{{posterUrl}}" width="400" height="240" />
                             <title>{{display_title}}</title>
                         </lockup>
@@ -17,17 +17,6 @@
                 </section>
             </shelf>
         {{/each}}
-        <shelf>
-            <section>
-                <header>
-                    <title>Eluvio Test</title>
-                </header>
-                <lockup onselect="playMedia('http://34.67.134.232/fmp4-cbcs-shaka/master.m3u8', 'video')">
-                    <img src="{{eluvio_logo}}" width="400" height="240" />
-                    <title>Eluvio Test 1</title>
-                </lockup>
-            </section>
-        </shelf>
     </collectionList>
 </stackTemplate>
 </document>

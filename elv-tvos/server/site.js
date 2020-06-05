@@ -100,17 +100,32 @@ module.exports = class Site {
                 title.baseLinkPath = titleLinkPath;
                 title.baseLinkUrl =
                   await this.client.LinkUrl({versionHash, linkPath: titleLinkPath});
+                title.playoutOptionsLinkPath = UrlJoin(titleLinkPath, "sources", "default");
 
                 let availableOfferings = await this.client.AvailableOfferings({versionHash: title.versionHash});
-
+              
+                for (const key in availableOfferings) {
+                  let offering = availableOfferings[key];
+                  let playoutOptions = await this.client.PlayoutOptions({
+                    libraryId: this.siteLibraryId,
+                    objectId: this.siteId,
+                    linkPath: title.playoutOptionsLinkPath,
+                    protocols: ["hls", "dash"],
+                    drms: ["aes-128", "widevine", "clear"],
+                    offering: key
+                  });
+                  let playoutUrl = (playoutOptions.hls.playoutMethods.clear || playoutOptions.hls.playoutMethods["aes-128"]).playoutUrl;
+                  offering.videoUrl = this.replaceTemplate(playoutUrl,true);
+                  if(offering.display_name == "default"){
+                    offering.display_name = "Watch";
+                  }
+                }
+              
                 //XXX: for testing
-                availableOfferings.test = availableOfferings.default;
                 title.availableOfferings = availableOfferings;
 
-                console.log(title.displayTitle + " " + title.versionHash);
-                console.log("Offerings: " + JQ(availableOfferings));
-
-                title.playoutOptionsLinkPath = UrlJoin(titleLinkPath, "sources", "default");
+                // console.log(title.displayTitle + " " + title.versionHash);
+                //console.log("Offerings: " + JQ(availableOfferings));
 
                 title.playoutOptions = await this.client.PlayoutOptions({
                   libraryId: this.siteLibraryId,
@@ -144,7 +159,8 @@ module.exports = class Site {
           playlists[parseInt(order)] = {
             playlistId: Id.next(),
             name,
-            titles: titles.filter(title => title)
+            titles: titles.filter(title => title),
+            order
           };
         } catch (error) {
           // eslint-disable-next-line no-console

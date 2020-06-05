@@ -204,6 +204,10 @@ function replaceTemplate(text) {
   return document;
 }
 
+function playPlaylistTitle(index) {
+  console.log("PLAY PLAYLIST ITEM: " + index);
+}
+
 function playMedia(mediaURL, mediaType) {
   var singleMediaItem = new MediaItem(mediaType, mediaURL);
   var mediaList = new Playlist();
@@ -219,7 +223,28 @@ function playMedia(mediaURL, mediaType) {
   myPlayer.play();
 }
 
-function loadTitle(index) {}
+async function loadPlaylistTitle(siteIndex, playlistIndex, index) {
+  //XXX: siteIndex is not passed for some reason
+  console.log(
+    "LOAD PLAYLIST ITEM: Site: " +
+      siteIndex +
+      " playlist index: " +
+      playlistIndex +
+      " index: " +
+      index
+  );
+  const documentURL =
+    baseURL + "detail.hbs/" + siteIndex + "/" + playlistIndex + "/" + index;
+  let text = await fetch(documentURL, "text");
+  var template = Handlebars.compile(text);
+  var params = `&session_id=${sessionTag}&app_id=${Device.appIdentifier}&app_version=${Device.appVersion}&system_version=${Device.systemVersion}&system_lang=${Settings.language}`;
+  var resolvedText = template({
+    params,
+    host: currentHost,
+  });
+
+  let document = pushTemplate(resolvedText);
+}
 
 function getHero() {
   return baseURL + "logo.jpg";
