@@ -44,21 +44,73 @@ function loadingTemplate() {
 }
 
 var fetch = function (url, responseType) {
+  console.log("fetch: " + url);
   return new Promise(function (resolve, reject) {
     var xhr = new XMLHttpRequest();
     xhr.open("get", url, true);
     xhr.responseType = responseType;
     xhr.onload = function () {
       var status = xhr.status;
+      console.log("fetch status: " + status);
       if (status == 200) {
         resolve(xhr.response);
       } else {
         reject(status);
       }
     };
+    xhr.addEventListener(
+      "load",
+      function () {
+        console.log("fetch load status: " + xhr.status);
+      },
+      false
+    );
     xhr.send();
   });
 };
+
+async function documentOnSelect(event) {
+  try {
+    const target = event.target;
+    const ele = target.parentNode;
+    const feature = ele.getFeature("MenuBarDocument");
+    if (!feature) {
+      return;
+    }
+    // Always get a new featureDoc since the old one might be stale from a reload
+    const documentURL = baseURL + target.getAttribute("documentURL");
+    console.log("onSelect for " + documentURL);
+    let docText = await fetch(documentURL, "text");
+    let resolvedText = resolveTemplate(docText);
+    console.log(`Resolved for document: ${documentURL} \n ${resolvedText}`);
+    var featureDoc = parser.parseFromString(resolvedText, "application/xml");
+    feature.setDocument(featureDoc, target);
+    console.log("Document set for menuItem.");
+  } catch (e) {
+    var alert = createAlert(
+      "Page Load Error",
+      "There was an error attempting to load the homepage.\n\n Please check your network connection and try again later."
+    );
+    navigationDocument.presentModal(alert);
+  }
+}
+
+function resolveTemplate(text) {
+  // compile the template
+  var template = Handlebars.compile(text);
+  var queryParams = `&session_id=${sessionTag}&app_id=${Device.appIdentifier}&app_version=${Device.appVersion}&system_version=${Device.systemVersion}&system_lang=${Settings.language}`;
+  var resolved = template({
+    host: currentHost,
+    params: queryParams,
+    fabric_node: currentHost,
+    app_id: Device.appIdentifier,
+    app_version: Device.appVersion,
+    session_id: sessionTag,
+    system_version: Device.systemVersion,
+    system_lang: Settings.language,
+  });
+  return resolved;
+}
 
 function getTemplate(extension) {
   var templateXHR = new XMLHttpRequest();
@@ -80,55 +132,63 @@ function getTemplate(extension) {
 
 function pushTemplate(text) {
   // compile the template
-  var template = Handlebars.compile(text);
-  var resolved = template({ host: currentHost });
-  console.log("Resolved Template: " + resolved);
-  var parser = new DOMParser();
-  var document = parser.parseFromString(resolved, "application/xml");
-  navigationDocument.pushDocument(document);
-}
-
-function resolveTemplate(text) {
-  // compile the template
-  var template = Handlebars.compile(text);
-  var queryParams = `&session_id=${sessionTag}&app_id=${Device.appIdentifier}&app_version=${Device.appVersion}&system_version=${Device.systemVersion}&system_lang=${Settings.language}`;
-  var resolved = template({
-    host: currentHost,
-    params: queryParams,
-    fabric_node: currentHost,
-    app_id: Device.appIdentifier,
-    app_version: Device.appVersion,
-    session_id: sessionTag,
-    system_version: Device.systemVersion,
-    system_lang: Settings.language,
-  });
-  return resolved;
-}
-
-function replaceTemplate(text) {
   let resolved = resolveTemplate(text);
   console.log("Resolved Template: " + resolved);
-  var parser = new DOMParser();
-  var document = parser.parseFromString(resolved, "application/xml");
+  let parser = new DOMParser();
+  let document = parser.parseFromString(resolved, "application/xml");
   document.addEventListener("select", async (event) => {
-    const target = event.target;
-    const ele = target.parentNode;
-    const feature = ele.getFeature("MenuBarDocument");
-    if (!feature) {
-      return;
-    }
     try {
+      const target = event.target;
+      const ele = target.parentNode;
+      const feature = ele.getFeature("MenuBarDocument");
+      if (!feature) {
+        return;
+      }
       // Always get a new featureDoc since the old one might be stale from a reload
       const documentURL = baseURL + target.getAttribute("documentURL");
       console.log("onSelect for " + documentURL);
       let docText = await fetch(documentURL, "text");
       let resolvedText = resolveTemplate(docText);
       console.log(`Resolved for document: ${documentURL} \n ${resolvedText}`);
-      var featureDoc = parser.parseFromString(resolvedText, "application/xml");
+      let featureDoc = parser.parseFromString(resolvedText, "application/xml");
       feature.setDocument(featureDoc, target);
       console.log("Document set for menuItem.");
     } catch (e) {
-      var alert = createAlert(
+      let alert = createAlert(
+        "Page Load Error",
+        "There was an error attempting to load the homepage.\n\n Please check your network connection and try again later."
+      );
+      navigationDocument.presentModal(alert);
+    }
+  });
+  navigationDocument.pushDocument(document);
+  return document;
+}
+
+function replaceTemplate(text) {
+  let resolved = resolveTemplate(text);
+  console.log("replaceTemplate: " + resolved);
+  let parser = new DOMParser();
+  let document = parser.parseFromString(resolved, "application/xml");
+  document.addEventListener("select", async (event) => {
+    try {
+      const target = event.target;
+      const ele = target.parentNode;
+      const feature = ele.getFeature("MenuBarDocument");
+      if (!feature) {
+        return;
+      }
+      // Always get a new featureDoc since the old one might be stale from a reload
+      const documentURL = baseURL + target.getAttribute("documentURL");
+      console.log("onSelect for " + documentURL);
+      let docText = await fetch(documentURL, "text");
+      let resolvedText = resolveTemplate(docText);
+      console.log(`Resolved for document: ${documentURL} \n ${resolvedText}`);
+      let featureDoc = parser.parseFromString(resolvedText, "application/xml");
+      feature.setDocument(featureDoc, target);
+      console.log("Document set for menuItem.");
+    } catch (e) {
+      let alert = createAlert(
         "Page Load Error",
         "There was an error attempting to load the homepage.\n\n Please check your network connection and try again later."
       );
@@ -141,6 +201,7 @@ function replaceTemplate(text) {
   } else {
     navigationDocument.replaceDocument(document, currentDoc);
   }
+  return document;
 }
 
 function playMedia(mediaURL, mediaType) {
@@ -158,8 +219,20 @@ function playMedia(mediaURL, mediaType) {
   myPlayer.play();
 }
 
+function loadTitle(index) {}
+
 function getHero() {
   return baseURL + "logo.jpg";
+}
+
+async function loadSite(index) {
+  console.log("LOAD SITE: " + index);
+  const documentURL = baseURL + "site.hbs/" + index;
+  let docText = await fetch(documentURL, "text");
+  console.log("Site text loaded: " + docText);
+  let resolvedText = resolveTemplate(docText);
+  console.log("\n\nResolvedText: " + docText);
+  let document = pushTemplate(resolvedText);
 }
 
 async function refreshMainPage() {

@@ -1,22 +1,27 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <document>
-<menuBarTemplate>
-        <row style="margin:20" >
-            <img style="tv-content-align:top; tv-align:left" src="{{title_logo}}" width="100" height="100" />
-            <header style="tv-content-align:top; tv-align:left; margin:20">
-                <title style="text-align:left" >{{display_title}}</title>
-                <description style="text-align:left; font-size:20">Powered by Eluvio</description>
-                <description style="text-align:left; font-size:18">{{date}}</description>
-            </header>
-        </row>
-        <menuBar>
-            <menuItem id="navigation_top_watch" documentURL="watch.hbs" autoHighlight="true">
-                <title>Watch</title>
-            </menuItem>
-            <menuItem id="navigation_settings" documentURL="settings.hbs">
-                <title>Settings</title>
-            </menuItem>
-        </menuBar>
-    <row style="margin:50" />
-</menuBarTemplate>
+   <listTemplate>
+      <banner>
+         <title>Eluvio TV</title>
+      </banner>
+      <list>
+         <header>
+            <title>Available Sites</title>
+         </header>
+         <section>
+            {{#each sites}}
+                <listItemLockup onselect="loadSite({{@index}})">
+                <title>{{display_title}}</title>
+                <relatedContent>
+                    <lockup>
+                        <img src="{{landscape_logo}}" width="1200" height="500" />
+                        <title>{{display_title}}</title>
+                        <description>{{info.synopsis}}</description>
+                    </lockup>
+                </relatedContent>
+                </listItemLockup>
+            {{/each}}
+         </section>
+      </list>
+   </listTemplate>
 </document>

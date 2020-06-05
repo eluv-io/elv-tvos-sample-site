@@ -29,6 +29,7 @@ module.exports = class Site {
         resolveLinks: true,
         resolveIncludeSource: true,
         resolveIgnoreErrors: true,
+        /*
         select: [
           "title",
           "display_title",
@@ -37,8 +38,10 @@ module.exports = class Site {
           "playlists",
           "seasons",
           "series",
-          "titles"
+          "titles",
+          "images"
         ]
+        */
       });
 
       siteInfo.baseLinkUrl = await this.client.LinkUrl({
@@ -53,6 +56,13 @@ module.exports = class Site {
       );
 
       siteInfo.title_logo = this.replaceTemplate(siteInfo.title_logo)
+
+      siteInfo.landscape_logo = this.createLink(
+        siteInfo.baseLinkUrl,
+        "images/landscape/default"
+      );
+
+      siteInfo.landscape_logo = this.replaceTemplate(siteInfo.landscape_logo)
       
       if(siteInfo.playlists) {
         siteInfo.playlists = await this.loadPlaylists(versionHash, siteInfo.playlists);
@@ -90,6 +100,15 @@ module.exports = class Site {
                 title.baseLinkPath = titleLinkPath;
                 title.baseLinkUrl =
                   await this.client.LinkUrl({versionHash, linkPath: titleLinkPath});
+
+                let availableOfferings = await this.client.AvailableOfferings({versionHash: title.versionHash});
+
+                //XXX: for testing
+                availableOfferings.test = availableOfferings.default;
+                title.availableOfferings = availableOfferings;
+
+                console.log(title.displayTitle + " " + title.versionHash);
+                console.log("Offerings: " + JQ(availableOfferings));
 
                 title.playoutOptionsLinkPath = UrlJoin(titleLinkPath, "sources", "default");
 
@@ -135,7 +154,7 @@ module.exports = class Site {
         }
       })
     );
-    
+
     return playlists.filter(playlist => playlist);
   }
 

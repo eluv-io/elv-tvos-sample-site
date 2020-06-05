@@ -8,20 +8,14 @@ var path = require('path');
 var {JQ,isEmpty,CreateID} = require('./server/utils')
 
 var fabric = new Fabric;
-var site = null;
+var sites = [];
 var date = "";
 
-const refreshSite = async (config) =>{
+const refreshSites = async (config) =>{
   let configUrl = config.configUrl;
-  let siteId = config.siteId;
   let privateKey = process.env.PRIVATEKEY;
   if(isEmpty(configUrl)){
     console.error("configUrl not set in config.");
-    process.exit(1);
-  }
-
-  if(isEmpty(siteId)){
-    console.error("siteId not set in config.");
     process.exit(1);
   }
 
@@ -32,12 +26,23 @@ const refreshSite = async (config) =>{
   
   try{
     await fabric.init({configUrl,privateKey});
-    newSite = new Site({fabric, siteId});
-    await newSite.loadSite();
+    var sitesIds = await fabric.findSites();
+    sites = [];
+    await Promise.all(
+      sitesIds.map(async siteId => {
+          console.log("Loading site: " + siteId);
+          let newSite = new Site({fabric, siteId});
+          await newSite.loadSite();
+          // console.log("Site loaded: " + JQ(newSite.siteInfo));
+          sites.push(newSite.siteInfo);
+          console.log(sites.length);
+      })
+    );
+    // console.log("Sites: " + JQ(sites));
     date = moment().format('MM/DD/YYYY h:mm:ss a');
-    site = newSite;
+
   }catch(e){
-    console.error(JQ(e));
+    console.error(e);
   }
 }
 
@@ -52,9 +57,9 @@ const main = async () => {
   app.set('view engine', 'hbs');
   app.set('views', path.join(__dirname, '/views'));
 
-  await refreshSite(Config);
+  await refreshSites(Config);
   //Refresh the Site every updateInterval
-  setInterval(()=>{refreshSite(Config)}, updateInterval);
+  setInterval(()=>{refreshSites(Config)}, updateInterval);
 
   app.get('/settings.hbs', async function(req, res) {
     //Keep the templates for the device to inject
@@ -70,31 +75,53 @@ const main = async () => {
       res.render("settings", params);
   });
 
-  //Serve the main tvml template
-  app.get('/*.hbs', async function(req, res) {
-    if(site && site.siteInfo){
+  app.get('/index.hbs', async function(req, res) {
+    if(!isEmpty(sites)){
       const params = {
-        title_logo: site.siteInfo.title_logo,
-        display_title: site.siteInfo.display_title,
-        playlists: site.siteInfo.playlists,
+        sites,
         eluvio_logo: serverHost + ":" + serverPort + "/logo.png",
         date
       };
       res.set('Cache-Control', 'no-cache');
-      let view = req.path.split('.').slice(0, -1).join('.').substr(1);
-      res.render(view, params);
+      res.render("index", params);
     }else{
       var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
       res.send(template, 404);
     }
   });
 
+    //Serve the main tvml template
+  app.get(['/site.hbs/:index','/watch.hbs/:index'], async function(req, res) {
+    try {
+      let view = req.path.split('.').slice(0, -1).join('.').substr(1);
+      console.log("Route "+ view + "/" + req.params.index);
+      let index = req.params.index;
+      let site = sites[index];
+      const params = {
+        title_logo: site.title_logo,
+        display_title: site.display_title,
+        playlists: site.playlists,
+        eluvio_logo: serverHost + ":" + serverPort + "/logo.png",
+        site_index: index,
+        date
+      };
+      res.set('Cache-Control', 'no-cache');
+      res.render(view, params);
+    }catch(e){
+      console.error(e);
+      var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
+      res.send(template, 404);
+    }
+  });
+
+
   const appFunc = async function(req, res) {
     let sessionTag = CreateID(8);
     const params = {
       CONFIG_URL: Config.configUrl,
       UPDATE_INTERVAL: updateInterval,
-      SESSION_TAG: sessionTag
+      SESSION_TAG: sessionTag,
+      SITES: sites
     };
     res.type('application/json');
     res.render('application', params);
@@ -107,6 +134,13 @@ const main = async () => {
   
   app.use(express.static('static'));
   app.use(express.static('views'));
+
+  // catch 404 and forward to error handler
+  app.use(function (req, res, next) {
+    const err = new Error('Not Found');
+    err.status = 404;
+    next(err);
+  });
 
   console.log("Server running on port: " + serverPort);
   
