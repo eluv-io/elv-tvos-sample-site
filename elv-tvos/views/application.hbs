@@ -209,6 +209,7 @@ function playPlaylistTitle(index) {
 }
 
 function playMedia(mediaURL, mediaType) {
+  console.log("playMedia: " + mediaURL);
   var singleMediaItem = new MediaItem(mediaType, mediaURL);
   var mediaList = new Playlist();
 

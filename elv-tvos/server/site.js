@@ -124,8 +124,8 @@ module.exports = class Site {
                 //XXX: for testing
                 title.availableOfferings = availableOfferings;
 
-                // console.log(title.displayTitle + " " + title.versionHash);
-                //console.log("Offerings: " + JQ(availableOfferings));
+                console.log(title.displayTitle + " " + title.versionHash);
+                console.log("Offerings: " + JQ(availableOfferings));
 
                 title.playoutOptions = await this.client.PlayoutOptions({
                   libraryId: this.siteLibraryId,

@@ -122,10 +122,9 @@ const main = async () => {
       let site_index = req.params.site_index;
       let playlist_index = req.params.playlist_index;
       let site = sites[site_index];
-      // console.log("Route "+ view + "/" + site_index + "/" + title_index);
+      console.log("Route "+ view + "/" + site_index + "/" + title_index);
 
       let title = site.playlists[playlist_index].titles[title_index];
-      // console.log("params: " + Object.keys(title.info.talent));
 
       let director = "";
       let genre = "";
@@ -134,15 +133,25 @@ const main = async () => {
       let length = "";
       let offerings = [];
       try {
-        director = title.info.talent.director[0].talent_full_name;
-        genre = title.info.genre[0];
-        date = title.info.release_date;
-        cast = title.info.talent.cast || [];
-        length = "";
         offerings = title.availableOfferings || [];
-      }catch(e){
+      }catch(e){}
+      try {
+        director = title.info.talent.director[0].talent_full_name;
+      }catch(e){}
+      try {
+        genre = title.info.genre[0];
+      }catch(e){}
+      try {
+        date = title.info.release_date;
+      }catch(e){}
+      try {
+        cast = title.info.talent.cast || [];
+      }catch(e){}
 
-      }
+      //TODO:
+      length = "";
+
+      console.log("Offerings: " + Object.keys(offerings));
 
       const params = {
         director,
