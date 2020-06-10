@@ -2,13 +2,14 @@ var express = require('express');
 var exbars = require('exbars');
 var moment = require('moment')
 var Fabric = require('./server/fabric');
-var Site = require('./server/site');
+var {Site, AllTitles} = require('./server/site');
 var Config = require('./config.json');
 var path = require('path');
 var atob = require('atob');
 var {JQ,isEmpty,CreateID} = require('./server/utils')
 
 var sites = [];
+var redeemSites = {};
 var date = "";
 
 const Hash = (code) => {
@@ -157,23 +158,33 @@ const main = async () => {
   });
 
       //Serve the site tvml template
-  app.get('/redeemsite.hbs/:code', async function(req, res) {
+  app.get(['/redeemsite.hbs/:code', '/redeemwatch.hbs/:code'], async function(req, res) {
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
       let code = req.params.code;
       console.log("Route "+ view + "/" + code);
-      let site = await redeemCode(Config,code);
+
+      let site = redeemSites[code];
+      if(isEmpty(site)){
+        site = await redeemCode(Config,code);
+        redeemSites[code] = site;
+      }
+
+      let titles = site.titles || [];
+      let playlists = site.playlists || [];
+
       const params = {
         title_logo: site.title_logo,
         display_title: site.display_title,
-        playlists: site.playlists,
+        playlists: playlists,
+        titles: titles,
         eluvio_logo: serverHost + ":" + serverPort + "/logo.png",
-        site_index: 0,
+        site_index: code,
         date
       };
 
       res.set('Cache-Control', 'no-cache');
-      res.render("site", params);
+      res.render(view, params);
     }catch(e){
       console.error(e);
       var template = '<document><loadingTemplate><activityIndicator><text>Could not load site from code.</text></activityIndicator></loadingTemplate></document>';
@@ -189,16 +200,75 @@ const main = async () => {
       let index = req.params.index;
       console.log("Route "+ view + "/" + index);
       let site = sites[index];
-      console.log("Site: " + JQ(site.playlists.length));
+      let titles = site.titles || [];
+      let playlists = site.playlists || [];
+      // console.log("Site titles: " + JQ(site.titles));
       const params = {
         title_logo: site.title_logo,
         display_title: site.display_title,
-        playlists: site.playlists,
+        playlists: playlists,
+        titles: titles,
         eluvio_logo: serverHost + ":" + serverPort + "/logo.png",
         site_index: index,
         date
       };
 
+      res.set('Cache-Control', 'no-cache');
+      res.render(view, params);
+    }catch(e){
+      console.error(e);
+      var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
+      res.send(template, 404);
+    }
+  });
+
+    //Serve the title details from versionHash tvml template
+    app.get('/detailhash.hbs/:versionHash', async function(req, res) {
+    try {
+      let view = req.path.split('.').slice(0, -1).join('.').substr(1);
+      let versionHash = req.params.versionHash;
+      console.log("Route "+ view + "/" + versionHash);
+      // console.log(Object.keys(AllTitles));
+      let title = AllTitles[versionHash];
+
+      console.log("Found title: " + title.display_title);
+
+      let director = "";
+      let genre = "";
+      let date = "";
+      let cast = [];
+      let length = "";
+      let offerings = [];
+      try {
+        offerings = title.availableOfferings || [];
+      }catch(e){}
+      try {
+        director = title.info.talent.director[0].talent_full_name;
+      }catch(e){}
+      try {
+        genre = title.info.genre[0];
+      }catch(e){}
+      try {
+        date = title.info.release_date;
+      }catch(e){}
+      try {
+        cast = title.info.talent.cast || [];
+      }catch(e){}
+
+      //TODO:
+      length = "";
+
+      // console.log("Offerings: " + Object.keys(offerings));
+
+      const params = {
+        director,
+        genre,
+        date,
+        cast,
+        title,
+        offerings,
+        date
+      };
       res.set('Cache-Control', 'no-cache');
       res.render(view, params);
     }catch(e){

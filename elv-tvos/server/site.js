@@ -5,7 +5,10 @@ var UrlJoin = require("url-join");
 var Id = require("@eluvio/elv-client-js/src/Id");
 var UUID = require("uuid");
 
-module.exports = class Site {
+//VersionHash to Title database
+var AllTitles = {};
+
+class Site {
   constructor({fabric, siteId, hostTemplate="{{{host}}}"}, videoQueryTemplate="{{params}}") {
     this.fabric = fabric;
     this.client = fabric.client;
@@ -64,9 +67,12 @@ module.exports = class Site {
 
       siteInfo.landscape_logo = this.replaceTemplate(siteInfo.landscape_logo)
       
-      if(siteInfo.playlists) {
-        siteInfo.playlists = await this.loadPlaylists(versionHash, siteInfo.playlists);
-      }
+      siteInfo.playlists = await this.loadPlaylists(versionHash, siteInfo.playlists);
+      siteInfo.series = await this.loadTitles(versionHash, "series", siteInfo.series);
+      siteInfo.seasons = await this.loadTitles(versionHash, "seasons", siteInfo.seasons);
+      siteInfo.episodes = await this.loadTitles(versionHash, "episodes", siteInfo.episodes);
+      siteInfo.titles = await this.loadTitles(versionHash, "titles", siteInfo.titles);
+      siteInfo.channels = await this.loadTitles(versionHash, "channels", siteInfo.channels);
 
       this.siteInfo = siteInfo;
     } catch (error) {
@@ -147,12 +153,19 @@ module.exports = class Site {
                 title.videoUrl = playoutUrl;
                 title.videoUrl = this.replaceTemplate(title.videoUrl,true);
 
+                let defaultOffering = {
+                  videoUrl: title.videoUrl,
+                  display_name:offering
+                }
+                title.availableOfferings = [defaultOffering];
+                
 
                 // title.titleId = Id.next();
 
                 Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
 
                 titles[parseInt(title.order)] = title;
+                AllTitles[title.versionHash] = title;
               } catch (error) {
                 // eslint-disable-next-line no-console
                 console.error(`Failed to load title ${titleSlug} in playlist ${order} (${name})`);
@@ -178,6 +191,68 @@ module.exports = class Site {
     );
 
     return playlists.filter(playlist => playlist);
+  }
+
+  async loadTitles(versionHash, metadataKey, titleInfo) {
+    if(!titleInfo) { return []; }
+
+    // Titles: {[index]: {[title-key]: { ...title }}
+    let titles = [];
+    await Promise.all(
+      Object.keys(titleInfo).map(async index => {
+        try {
+          const titleKey = Object.keys(titleInfo[index])[0];
+          let title = titleInfo[index][titleKey];
+
+          if(title["."].resolution_error) {
+            return;
+          }
+
+          title.displayTitle = title.display_title || title.title || "";
+          title.versionHash = title["."].source;
+          title.objectId = this.client.utils.DecodeVersionHash(title.versionHash).objectId;
+
+          title.titleId = Id.next();
+
+          const linkPath = UrlJoin("public", "asset_metadata", metadataKey, index, titleKey);
+          title.playoutOptionsLinkPath = UrlJoin(linkPath, "sources", "default");
+          title.baseLinkPath = linkPath;
+          title.baseLinkUrl =
+            await this.client.LinkUrl({versionHash, linkPath});
+
+          let offering = "default";
+          title.playoutOptions = await this.client.PlayoutOptions({
+            libraryId: this.siteLibraryId,
+            objectId: this.siteId,
+            linkPath: title.playoutOptionsLinkPath,
+            protocols: ["hls", "dash"],
+            drms: ["aes-128", "widevine", "clear"],
+            offering
+          });
+
+          let playoutUrl = (title.playoutOptions.hls.playoutMethods.clear || title.playoutOptions.hls.playoutMethods["aes-128"]).playoutUrl;
+          title.videoUrl = playoutUrl;
+          title.videoUrl = this.replaceTemplate(title.videoUrl,true);
+          let defaultOffering = {
+                  videoUrl: title.videoUrl,
+                  display_name:offering
+                }
+          title.availableOfferings = [defaultOffering];
+
+          Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
+
+          titles[index] = title;
+          AllTitles[title.versionHash] = title;
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error(`Failed to load title ${index}`);
+          // eslint-disable-next-line no-console
+          console.error(error);
+        }
+      })
+    );
+
+    return titles.filter(title => title);
   }
 
   async imageLinks({baseLinkUrl, versionHash, images}) {
@@ -237,4 +312,9 @@ module.exports = class Site {
 
     return string;
   }
+}
+
+module.exports = {
+  AllTitles,
+  Site,
 }
