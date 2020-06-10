@@ -99,7 +99,7 @@ const redeemCode = async (config,code) => {
   }
 
   try {
-    fabric.initFromEncrypted({configUrl, encryptedPrivateKey, password: code});
+    await fabric.initFromEncrypted({configUrl, encryptedPrivateKey, password: code});
     let newSite = new Site({fabric, siteId});
     await newSite.loadSite();
     return newSite.siteInfo;
@@ -187,14 +187,15 @@ const main = async () => {
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
       let index = req.params.index;
-      // console.log("Route "+ view + "/" + index);
+      console.log("Route "+ view + "/" + index);
       let site = sites[index];
+      console.log("Site: " + JQ(site.playlists.length));
       const params = {
         title_logo: site.title_logo,
         display_title: site.display_title,
         playlists: site.playlists,
         eluvio_logo: serverHost + ":" + serverPort + "/logo.png",
-        site_index: 0,
+        site_index: index,
         date
       };
 

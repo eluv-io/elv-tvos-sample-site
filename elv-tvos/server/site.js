@@ -3,6 +3,7 @@ var {isEmpty, JQ} = require('./utils');
 var URI = require("urijs");
 var UrlJoin = require("url-join");
 var Id = require("@eluvio/elv-client-js/src/Id");
+var UUID = require("uuid");
 
 module.exports = class Site {
   constructor({fabric, siteId, hostTemplate="{{{host}}}"}, videoQueryTemplate="{{params}}") {
@@ -23,13 +24,11 @@ module.exports = class Site {
       const versionHash = await this.client.LatestVersionHash({objectId: this.siteId});
 
       let siteInfo = await this.client.ContentObjectMetadata({
-        libraryId: this.siteLibraryId,
-        objectId: this.siteId,
+        versionHash,
         metadataSubtree: "public/asset_metadata",
         resolveLinks: true,
         resolveIncludeSource: true,
         resolveIgnoreErrors: true,
-        /*
         select: [
           "title",
           "display_title",
@@ -39,9 +38,8 @@ module.exports = class Site {
           "seasons",
           "series",
           "titles",
-          "images"
+          UUID()
         ]
-        */
       });
 
       siteInfo.baseLinkUrl = await this.client.LinkUrl({
@@ -85,7 +83,7 @@ module.exports = class Site {
       Object.keys(playlistInfo).map(async playlistSlug => {
         try {
           const {name, order, list} = playlistInfo[playlistSlug];
-
+          // console.log("Playlist: " + name);
           let titles = [];
           await Promise.all(
             Object.keys(list || {}).map(async titleSlug => {
@@ -93,6 +91,7 @@ module.exports = class Site {
                 let title = list[titleSlug];
 
                 title.displayTitle = title.display_title || title.title || "";
+                // console.log("title: " + title.displayTitle);
                 title.versionHash = title["."].source;
                 title.objectId = this.client.utils.DecodeVersionHash(title.versionHash).objectId;
 
@@ -102,6 +101,7 @@ module.exports = class Site {
                   await this.client.LinkUrl({versionHash, linkPath: titleLinkPath});
                 title.playoutOptionsLinkPath = UrlJoin(titleLinkPath, "sources", "default");
 
+                /*
                 let availableOfferings = await this.client.AvailableOfferings({versionHash: title.versionHash});
               
                 for (const key in availableOfferings) {
@@ -120,19 +120,23 @@ module.exports = class Site {
                     offering.display_name = "Watch";
                   }
                 }
+                */
               
                 //XXX: for testing
-                title.availableOfferings = availableOfferings;
+                // title.availableOfferings = availableOfferings;
 
                 // console.log(title.displayTitle + " " + title.versionHash);
                 // console.log("Offerings: " + JQ(availableOfferings));
 
+                //TODO: get offering from available offering
+                let offering = "default";
                 title.playoutOptions = await this.client.PlayoutOptions({
                   libraryId: this.siteLibraryId,
                   objectId: this.siteId,
                   linkPath: title.playoutOptionsLinkPath,
                   protocols: ["hls", "dash"],
-                  drms: ["aes-128", "widevine", "clear"]
+                  drms: ["aes-128", "widevine", "clear"],
+                  offering
                 });
 
                 let playoutUrl = (title.playoutOptions.hls.playoutMethods.clear || title.playoutOptions.hls.playoutMethods["aes-128"]).playoutUrl;
@@ -142,7 +146,7 @@ module.exports = class Site {
                 title.videoUrl = this.replaceTemplate(title.videoUrl,true);
 
 
-                title.titleId = Id.next();
+                // title.titleId = Id.next();
 
                 Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
 
