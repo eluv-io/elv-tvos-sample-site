@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@eluvio/elv-client-js": "git+https://github.com/eluv-io/elv-client-js.git#8eef0e7ba5508e5c84c85040fd7d278a0f3f338b",
+    "atob": "^2.1.2",
     "exbars": "^1.0.4",
     "express": "^4.17.1",
     "express-handlebars": "^4.0.3",

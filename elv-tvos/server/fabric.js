@@ -11,6 +11,14 @@ module.exports = class Fabric {
     this.configUrl = configUrl;
   }
 
+  async initFromEncrypted({configUrl, encryptedPrivateKey, password}){
+    this.client = await ElvClient.FromConfigurationUrl({ configUrl });
+    this.wallet = this.client.GenerateWallet();
+    this.signer = await this.wallet.AddAccountFromEncryptedPK({encryptedPrivateKey, password});
+    this.client.SetSigner({signer:this.signer});
+    this.configUrl = configUrl;
+  }
+
   async findSites() {
     let sites = [];
 

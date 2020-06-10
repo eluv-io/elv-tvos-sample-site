@@ -40,7 +40,7 @@ function loadingTemplate() {
   );
 
   var currentDoc = getActiveDocument();
-  navigationDocument.replaceDocument(parsedTemplate, currentDoc);
+  navigationDocument.pushDocument(parsedTemplate, currentDoc);
 }
 
 var fetch = function (url, responseType) {
@@ -249,6 +249,41 @@ async function loadPlaylistTitle(siteIndex, playlistIndex, index) {
 
 function getHero() {
   return baseURL + "logo.jpg";
+}
+
+async function loadRedeemForm() {
+  console.log("LOAD REDEEM FORM");
+  const documentURL = baseURL + "redeem.hbs";
+  let docText = await fetch(documentURL, "text");
+  console.log("Site text loaded: " + docText);
+  let resolvedText = resolveTemplate(docText);
+  console.log("\n\nResolvedText: " + docText);
+  let document = pushTemplate(resolvedText);
+  document.addEventListener("select", async (event) => {
+    try {
+      const textField = document.getElementById("redeemField");
+      const value = textField.getFeature("Keyboard").text;
+      console.log("Redeem Selected! " + value);
+      loadRedeemSite(value);
+    } catch (e) {
+      var alert = createAlert(
+        "Server Error",
+        "There was an error loading the site."
+      );
+      navigationDocument.presentModal(alert);
+    }
+  });
+}
+
+async function loadRedeemSite(code) {
+  console.log("LOAD REDEEM SITE");
+  loadingTemplate();
+  const documentURL = baseURL + "redeemsite.hbs/" + code;
+  let docText = await fetch(documentURL, "text");
+  console.log("Site text loaded: " + docText);
+  let resolvedText = resolveTemplate(docText);
+  console.log("\n\nResolvedText: " + docText);
+  let document = replaceTemplate(resolvedText);
 }
 
 async function loadSite(index) {

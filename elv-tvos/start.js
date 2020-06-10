@@ -5,11 +5,17 @@ var Fabric = require('./server/fabric');
 var Site = require('./server/site');
 var Config = require('./config.json');
 var path = require('path');
+var atob = require('atob');
 var {JQ,isEmpty,CreateID} = require('./server/utils')
 
-var fabric = new Fabric;
 var sites = [];
 var date = "";
+
+const Hash = (code) => {
+  const chars = code.split("").map(code => code.charCodeAt(0));
+  return chars.reduce((sum, char, i) => (chars[i + 1] ? (sum * 2) + char * chars[i+1] * (i + 1) : sum + char), 0).toString();
+};
+
 
 const refreshSites = async (config) =>{
   let configUrl = config.configUrl;
@@ -24,6 +30,7 @@ const refreshSites = async (config) =>{
     process.exit(1);
   }
   
+  let fabric = new Fabric;
   try{
     await fabric.init({configUrl,privateKey});
     var sitesIds = await fabric.findSites();
@@ -42,6 +49,66 @@ const refreshSites = async (config) =>{
     sites = newSites;
   }catch(e){
     console.error(e);
+  }
+}
+
+const redeemCode = async (config,code) => {
+  let configUrl = config.configUrl;
+  let privateKey = process.env.PRIVATEKEY;
+  let siteSelectorId = config.siteSelectorId;
+
+  if(isEmpty(configUrl)){
+    console.error("configUrl not set in config.");
+    return null;
+  }
+
+  if(isEmpty(privateKey)){
+    console.error("Please 'export PRIVATEKEY=XXXX' before running.");
+    return null;
+  }
+
+  if(isEmpty(siteSelectorId)){
+    console.error("siteSelectorId not set in config.");
+    return null;
+  }
+
+  let fabric = new Fabric;
+  let encryptedPrivateKey = "";
+  let siteId = "";
+  try{
+    const hash = Hash(code);
+    await fabric.init({configUrl,privateKey});
+    let siteSelector = await fabric.client.LatestVersionHash({objectId: siteSelectorId});
+
+    const siteInfo = await fabric.client.ContentObjectMetadata({
+      versionHash: siteSelector,
+      metadataSubtree: `public/codes/${hash}`
+    });
+
+    if(!siteInfo) {
+      this.SetError("Invalid code");
+      return null;;
+    }
+    siteId = siteInfo.sites[0].siteId; 
+    encryptedPrivateKey = atob(siteInfo.ak);
+
+  }catch(e){
+    console.error("Error reading site selector:");
+    console.error(e);
+    return null;
+  }
+
+  try {
+    fabric.initFromEncrypted({configUrl, encryptedPrivateKey, password: code});
+    let newSite = new Site({fabric, siteId});
+    await newSite.loadSite();
+    return newSite.siteInfo;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("Error redeeming code:");
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return null;
   }
 }
 
@@ -88,6 +155,32 @@ const main = async () => {
       res.send(template, 404);
     }
   });
+
+      //Serve the site tvml template
+  app.get('/redeemsite.hbs/:code', async function(req, res) {
+    try {
+      let view = req.path.split('.').slice(0, -1).join('.').substr(1);
+      let code = req.params.code;
+      console.log("Route "+ view + "/" + code);
+      let site = await redeemCode(Config,code);
+      const params = {
+        title_logo: site.title_logo,
+        display_title: site.display_title,
+        playlists: site.playlists,
+        eluvio_logo: serverHost + ":" + serverPort + "/logo.png",
+        site_index: 0,
+        date
+      };
+
+      res.set('Cache-Control', 'no-cache');
+      res.render("site", params);
+    }catch(e){
+      console.error(e);
+      var template = '<document><loadingTemplate><activityIndicator><text>Could not load site from code.</text></activityIndicator></loadingTemplate></document>';
+      res.send(template, 404);
+    }
+  });
+
 
     //Serve the site tvml template
   app.get(['/site.hbs/:index','/watch.hbs/:index'], async function(req, res) {
@@ -151,7 +244,7 @@ const main = async () => {
       //TODO:
       length = "";
 
-      console.log("Offerings: " + Object.keys(offerings));
+      // console.log("Offerings: " + Object.keys(offerings));
 
       const params = {
         director,

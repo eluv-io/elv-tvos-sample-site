@@ -6,11 +6,24 @@
       </banner>
       <list>
          <header>
-            <title>Available Sites</title>
+            <title>Available Options</title>
          </header>
          <section>
+            <listItemLockup onselect="loadRedeemForm()">
+                <decorationImage src="resource://button-more" />
+                <title>Redeem Site Code</title>
+                <relatedContent>
+                    <lockup>
+                        <img src="{{eluvio_logo}}" width="1200" height="500" />
+                        <title>Redeem Site Code</title>
+                        <description>If you have an access code, enter it here to load the Site.</description>
+                    </lockup>
+                </relatedContent>
+            </listItemLockup>
+
             {{#each sites}}
                 <listItemLockup onselect="loadSite({{@index}})">
+                <decorationImage src="resource://button-preview" />
                 <title>{{display_title}}</title>
                 <relatedContent>
                     <lockup>
