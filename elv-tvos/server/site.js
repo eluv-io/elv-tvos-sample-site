@@ -29,6 +29,7 @@ module.exports = class Site {
         resolveLinks: true,
         resolveIncludeSource: true,
         resolveIgnoreErrors: true,
+        /*
         select: [
           "title",
           "display_title",
@@ -40,6 +41,7 @@ module.exports = class Site {
           "titles",
           UUID()
         ]
+        */
       });
 
       siteInfo.baseLinkUrl = await this.client.LinkUrl({
