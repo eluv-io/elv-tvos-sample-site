@@ -197,9 +197,6 @@ class Site {
       }
 
       for (const key in availableOfferings) {
-        if(!allowedOfferings.includes(key)){
-          continue;
-        }
         let offering = availableOfferings[key];
         let playoutOptions = await this.client.PlayoutOptions({
           libraryId: this.siteLibraryId,
@@ -213,6 +210,9 @@ class Site {
         offering.videoUrl = this.replaceTemplate(playoutUrl,true);
         if(offering.display_name == "default"){
           offering.display_name = "Watch";
+        }
+        if(allowedOfferings.length > 0 && !allowedOfferings.includes(key)){
+          continue;
         }
         newAvailableOfferings[key] = offering;
       }
