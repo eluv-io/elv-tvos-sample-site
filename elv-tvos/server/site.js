@@ -142,14 +142,14 @@ class Site {
                   libraryId: this.siteLibraryId,
                   objectId: this.siteId,
                   linkPath: title.playoutOptionsLinkPath,
-                  protocols: ["hls", "dash"],
-                  drms: ["aes-128", "widevine", "clear"],
+                  protocols: ["hls"],
+                  drms: ["sample-aes", "clear"],
                   offering
                 });
 
-                let playoutUrl = (title.playoutOptions.hls.playoutMethods.clear || title.playoutOptions.hls.playoutMethods["aes-128"]).playoutUrl;
+                let playoutUrl = (title.playoutOptions.hls.playoutMethods.clear || title.playoutOptions.hls.playoutMethods["sample-aes"]).playoutUrl;
                 //playoutUrl = playoutUrl.replace(/player_profile=hls-js/,"player_profile=hls-js-2441");
-
+                // console.log("playoutOptions: " + JQ(title.playoutOptions.hls.playoutMethods["sample-aes"]));
                 title.videoUrl = playoutUrl;
                 title.videoUrl = this.replaceTemplate(title.videoUrl,true);
 
@@ -225,12 +225,13 @@ class Site {
             libraryId: this.siteLibraryId,
             objectId: this.siteId,
             linkPath: title.playoutOptionsLinkPath,
-            protocols: ["hls", "dash"],
-            drms: ["aes-128", "widevine", "clear"],
+            protocols: ["hls"],
+            drms: ["sample-aes", "clear"],
             offering
           });
 
-          let playoutUrl = (title.playoutOptions.hls.playoutMethods.clear || title.playoutOptions.hls.playoutMethods["aes-128"]).playoutUrl;
+          let playoutUrl = (title.playoutOptions.hls.playoutMethods.clear || title.playoutOptions.hls.playoutMethods["sample-aes"]).playoutUrl;
+          
           title.videoUrl = playoutUrl;
           title.videoUrl = this.replaceTemplate(title.videoUrl,true);
           let defaultOffering = {
