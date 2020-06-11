@@ -247,10 +247,10 @@ async function loadPlaylistTitle(siteIndex, playlistIndex, index) {
   let document = pushTemplate(resolvedText);
 }
 
-async function loadTitle(versionHash) {
+async function loadTitle(id) {
   //XXX: siteIndex is not passed for some reason
-  console.log("LOAD TITLE:" + versionHash);
-  const documentURL = baseURL + "detailhash.hbs/" + versionHash;
+  console.log("LOAD TITLE:" + id);
+  const documentURL = baseURL + "detailhash.hbs/" + id;
   let text = await fetch(documentURL, "text");
   var template = Handlebars.compile(text);
   var params = `&session_id=${sessionTag}&app_id=${Device.appIdentifier}&app_version=${Device.appVersion}&system_version=${Device.systemVersion}&system_lang=${Settings.language}`;

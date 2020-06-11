@@ -100,7 +100,7 @@ class Site {
                 title.displayTitle = title.display_title || title.title || "";
                 title.versionHash = title["."].source;
                 title.objectId = this.client.utils.DecodeVersionHash(title.versionHash).objectId;
-
+                title.titleId = Id.next();
                 const titleLinkPath = `public/asset_metadata/playlists/${playlistSlug}/list/${titleSlug}`;
                 title.baseLinkPath = titleLinkPath;
                 title.baseLinkUrl =
@@ -112,7 +112,7 @@ class Site {
                 Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
 
                 titles[parseInt(title.order)] = title;
-                AllTitles[title.versionHash] = title;
+                AllTitles[title.titleId] = title;
               } catch (error) {
                 // eslint-disable-next-line no-console
                 console.error(`Failed to load title ${titleSlug} in playlist ${order} (${name})`);
@@ -173,7 +173,7 @@ class Site {
           Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
 
           titles[index] = title;
-          AllTitles[title.versionHash] = title;
+          AllTitles[title.titleId] = title;
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error(`Failed to load title ${index}`);

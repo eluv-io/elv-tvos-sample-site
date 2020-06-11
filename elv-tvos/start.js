@@ -223,13 +223,13 @@ const main = async () => {
   });
 
     //Serve the title details from versionHash tvml template
-    app.get('/detailhash.hbs/:versionHash', async function(req, res) {
+    app.get('/detailhash.hbs/:id', async function(req, res) {
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
-      let versionHash = req.params.versionHash;
-      console.log("Route "+ view + "/" + versionHash);
+      let id = req.params.id;
+      console.log("Route "+ view + "/" + id);
       // console.log(Object.keys(AllTitles));
-      let title = AllTitles[versionHash];
+      let title = AllTitles[id];
 
       console.log("Found title: " + title.display_title);
 
