@@ -4,7 +4,8 @@ module.exports = {
   JQ : obj => JSON.stringify(obj, null, 2),
 
   isEmpty : obj => {
-    const result = obj === null || obj === undefined || obj === '';
+    const result = obj === null || obj === undefined || obj === '' 
+      || (Object.keys(obj).length === 0 && obj.constructor === Object);
     return result;
   },
 

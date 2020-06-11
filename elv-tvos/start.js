@@ -238,9 +238,9 @@ const main = async () => {
       let date = "";
       let cast = [];
       let length = "";
-      let offerings = [];
+      let offerings = {};
       try {
-        offerings = title.availableOfferings || [];
+        offerings = title.availableOfferings || {};
       }catch(e){}
       try {
         director = title.info.talent.director[0].talent_full_name;
@@ -258,7 +258,7 @@ const main = async () => {
       //TODO:
       length = "";
 
-      // console.log("Offerings: " + Object.keys(offerings));
+      console.log("Offerings: " + Object.keys(offerings));
 
       const params = {
         director,

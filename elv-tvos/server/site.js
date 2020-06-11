@@ -26,7 +26,7 @@ class Site {
 
       const versionHash = await this.client.LatestVersionHash({objectId: this.siteId});
 
-      let siteInfo = await this.client.ContentObjectMetadata({
+      this.siteInfo = await this.client.ContentObjectMetadata({
         versionHash,
         metadataSubtree: "public/asset_metadata",
         resolveLinks: true,
@@ -47,34 +47,33 @@ class Site {
         */
       });
 
-      siteInfo.baseLinkUrl = await this.client.LinkUrl({
+      this.siteInfo.baseLinkUrl = await this.client.LinkUrl({
         libraryId: this.siteLibraryId,
         objectId: this.siteId,
         linkPath: "public/asset_metadata"
       });
 
-      siteInfo.title_logo = this.createLink(
-        siteInfo.baseLinkUrl,
+      this.siteInfo.title_logo = this.createLink(
+        this.siteInfo.baseLinkUrl,
         "images/title_logo/thumbnail"
       );
 
-      siteInfo.title_logo = this.replaceTemplate(siteInfo.title_logo)
+      this.siteInfo.title_logo = this.replaceTemplate(this.siteInfo.title_logo)
 
-      siteInfo.landscape_logo = this.createLink(
-        siteInfo.baseLinkUrl,
+      this.siteInfo.landscape_logo = this.createLink(
+        this.siteInfo.baseLinkUrl,
         "images/landscape/default"
       );
 
-      siteInfo.landscape_logo = this.replaceTemplate(siteInfo.landscape_logo)
+      this.siteInfo.landscape_logo = this.replaceTemplate(this.siteInfo.landscape_logo)
       
-      siteInfo.playlists = await this.loadPlaylists(versionHash, siteInfo.playlists);
-      siteInfo.series = await this.loadTitles(versionHash, "series", siteInfo.series);
-      siteInfo.seasons = await this.loadTitles(versionHash, "seasons", siteInfo.seasons);
-      siteInfo.episodes = await this.loadTitles(versionHash, "episodes", siteInfo.episodes);
-      siteInfo.titles = await this.loadTitles(versionHash, "titles", siteInfo.titles);
-      siteInfo.channels = await this.loadTitles(versionHash, "channels", siteInfo.channels);
+      this.siteInfo.playlists = await this.loadPlaylists(versionHash, this.siteInfo.playlists);
+      this.siteInfo.series = await this.loadTitles(versionHash, "series", this.siteInfo.series);
+      this.siteInfo.seasons = await this.loadTitles(versionHash, "seasons", this.siteInfo.seasons);
+      this.siteInfo.episodes = await this.loadTitles(versionHash, "episodes", this.siteInfo.episodes);
+      this.siteInfo.titles = await this.loadTitles(versionHash, "titles", this.siteInfo.titles);
+      this.siteInfo.channels = await this.loadTitles(versionHash, "channels", this.siteInfo.channels);
 
-      this.siteInfo = siteInfo;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Failed to load site:");
@@ -99,7 +98,6 @@ class Site {
                 let title = list[titleSlug];
 
                 title.displayTitle = title.display_title || title.title || "";
-                // console.log("title: " + title.displayTitle);
                 title.versionHash = title["."].source;
                 title.objectId = this.client.utils.DecodeVersionHash(title.versionHash).objectId;
 
@@ -108,59 +106,8 @@ class Site {
                 title.baseLinkUrl =
                   await this.client.LinkUrl({versionHash, linkPath: titleLinkPath});
                 title.playoutOptionsLinkPath = UrlJoin(titleLinkPath, "sources", "default");
-
-                /*
-                let availableOfferings = await this.client.AvailableOfferings({versionHash: title.versionHash});
               
-                for (const key in availableOfferings) {
-                  let offering = availableOfferings[key];
-                  let playoutOptions = await this.client.PlayoutOptions({
-                    libraryId: this.siteLibraryId,
-                    objectId: this.siteId,
-                    linkPath: title.playoutOptionsLinkPath,
-                    protocols: ["hls", "dash"],
-                    drms: ["aes-128", "widevine", "clear"],
-                    offering: key
-                  });
-                  let playoutUrl = (playoutOptions.hls.playoutMethods.clear || playoutOptions.hls.playoutMethods["aes-128"]).playoutUrl;
-                  offering.videoUrl = this.replaceTemplate(playoutUrl,true);
-                  if(offering.display_name == "default"){
-                    offering.display_name = "Watch";
-                  }
-                }
-                */
-              
-                //XXX: for testing
-                // title.availableOfferings = availableOfferings;
-
-                // console.log(title.displayTitle + " " + title.versionHash);
-                // console.log("Offerings: " + JQ(availableOfferings));
-
-                //TODO: get offering from available offering
-                let offering = "default";
-                title.playoutOptions = await this.client.PlayoutOptions({
-                  libraryId: this.siteLibraryId,
-                  objectId: this.siteId,
-                  linkPath: title.playoutOptionsLinkPath,
-                  protocols: ["hls"],
-                  drms: ["sample-aes", "clear"],
-                  offering
-                });
-
-                let playoutUrl = (title.playoutOptions.hls.playoutMethods.clear || title.playoutOptions.hls.playoutMethods["sample-aes"]).playoutUrl;
-                //playoutUrl = playoutUrl.replace(/player_profile=hls-js/,"player_profile=hls-js-2441");
-                // console.log("playoutOptions: " + JQ(title.playoutOptions.hls.playoutMethods["sample-aes"]));
-                title.videoUrl = playoutUrl;
-                title.videoUrl = this.replaceTemplate(title.videoUrl,true);
-
-                let defaultOffering = {
-                  videoUrl: title.videoUrl,
-                  display_name:offering
-                }
-                title.availableOfferings = [defaultOffering];
-                
-
-                // title.titleId = Id.next();
+                title.availableOfferings = await this.getAvailableOfferings(title);
 
                 Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
 
@@ -220,25 +167,8 @@ class Site {
           title.baseLinkUrl =
             await this.client.LinkUrl({versionHash, linkPath});
 
-          let offering = "default";
-          title.playoutOptions = await this.client.PlayoutOptions({
-            libraryId: this.siteLibraryId,
-            objectId: this.siteId,
-            linkPath: title.playoutOptionsLinkPath,
-            protocols: ["hls"],
-            drms: ["sample-aes", "clear"],
-            offering
-          });
-
-          let playoutUrl = (title.playoutOptions.hls.playoutMethods.clear || title.playoutOptions.hls.playoutMethods["sample-aes"]).playoutUrl;
-          
-          title.videoUrl = playoutUrl;
-          title.videoUrl = this.replaceTemplate(title.videoUrl,true);
-          let defaultOffering = {
-                  videoUrl: title.videoUrl,
-                  display_name:offering
-                }
-          title.availableOfferings = [defaultOffering];
+          title.availableOfferings = await this.getAvailableOfferings(title);
+          // console.log("AvailableOfferings: " + JQ(title.availableOfferings));
 
           Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
 
@@ -254,6 +184,48 @@ class Site {
     );
 
     return titles.filter(title => title);
+  }
+
+  async getAvailableOfferings(title){
+    let allowedOfferings = [];
+    var newAvailableOfferings = {};
+    let availableOfferings = {};
+    try {
+      availableOfferings = await this.client.AvailableOfferings({versionHash: title.versionHash});
+      if(!isEmpty(this.siteInfo.allowed_offerings)){
+        allowedOfferings = this.siteInfo.allowed_offerings;
+      }
+
+      for (const key in availableOfferings) {
+        if(!allowedOfferings.includes(key)){
+          continue;
+        }
+        let offering = availableOfferings[key];
+        let playoutOptions = await this.client.PlayoutOptions({
+          libraryId: this.siteLibraryId,
+          objectId: this.siteId,
+          linkPath: title.playoutOptionsLinkPath,
+          protocols: ["hls", "dash"],
+          drms: ["sample-aes", "clear"],
+          offering: key
+        });
+        let playoutUrl = (playoutOptions.hls.playoutMethods.clear || playoutOptions.hls.playoutMethods["sample-aes"]).playoutUrl;
+        offering.videoUrl = this.replaceTemplate(playoutUrl,true);
+        if(offering.display_name == "default"){
+          offering.display_name = "Watch";
+        }
+        newAvailableOfferings[key] = offering;
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(`Failed to get offerings for ${title.displayTitle}: `);
+      // eslint-disable-next-line no-console
+      console.error(error);
+    }
+    if(isEmpty(newAvailableOfferings)){
+      newAvailableOfferings = availableOfferings;
+    }
+    return newAvailableOfferings;
   }
 
   async imageLinks({baseLinkUrl, versionHash, images}) {
