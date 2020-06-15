@@ -14,12 +14,12 @@ npm install
 
 ### Configuration
 
-Create elv-tvos/config.json or copy example-config.json with your Fabric values.
+Create elv-tvos/config.json with your configuration values.
 
 ```
 {
-  "configUrl": "[FABRIC_URL]/config",
-  "siteId": "iq__xxxx",
+  "configUrl": "https://main.net955305.contentfabric.io/config",
+  "siteSelectorId": "iq__xxxx",
   "serverPort": 4001,
   "serverHost": "http://127.0.0.1",
   "updateInterval": 60000
@@ -27,7 +27,13 @@ Create elv-tvos/config.json or copy example-config.json with your Fabric values.
 
 ```
 
-### Edit Debug.xconfig and Release.xconfig with the server url.
+- configUrl - The url to the Fabric you would like to use. The above example is the main production Fabric.
+- siteSelectorId - The site selector object id for your organization. This can be created with our creator tools.
+- serverPort - The port this server will run.
+- serverHost - The full domain where this server will be deployed.
+- updateInterval - The interval for refreshing content in milliseconds.
+
+### Edit Debug.xconfig and Release.xconfig with the server url including port.
 
 ```
 # DEBUG
