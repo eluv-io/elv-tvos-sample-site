@@ -8,6 +8,8 @@ var path = require('path');
 var atob = require('atob');
 var {JQ,isEmpty,CreateID} = require('./server/utils')
 
+var app = express();
+
 var sites = [];
 var redeemSites = {};
 var date = "";
@@ -118,8 +120,6 @@ const main = async () => {
   let serverPort = Config.serverPort || 4001;
   let updateInterval = Config.updateInterval || 60000;
 
-  var app = express();
-
   app.engine('hbs', exbars({defaultLayout: false}));
   app.set('view engine', 'hbs');
   app.set('views', path.join(__dirname, '/views'));
@@ -202,9 +202,11 @@ const main = async () => {
       let site = sites[index];
       let titles = site.titles || [];
       let playlists = site.playlists || [];
+      let titleColor = "rgb(236,245,255)";
       // console.log("Site titles: " + JQ(site.titles));
       const params = {
         title_logo: site.title_logo,
+        title_color: titleColor,
         display_title: site.display_title,
         playlists: playlists,
         titles: titles,
@@ -278,64 +280,6 @@ const main = async () => {
     }
   });
 
-  //Serve the title details tvml template
-  app.get('/detail.hbs/:site_index/:playlist_index/:title_index', async function(req, res) {
-    try {
-      let view = req.path.split('.').slice(0, -1).join('.').substr(1);
-      let title_index = req.params.title_index;
-      let site_index = req.params.site_index;
-      let playlist_index = req.params.playlist_index;
-      let site = sites[site_index];
-      console.log("Route "+ view + "/" + site_index + "/" + title_index);
-
-      let title = site.playlists[playlist_index].titles[title_index];
-
-      let director = "";
-      let genre = "";
-      let date = "";
-      let cast = [];
-      let length = "";
-      let offerings = [];
-      try {
-        offerings = title.availableOfferings || [];
-      }catch(e){}
-      try {
-        director = title.info.talent.director[0].talent_full_name;
-      }catch(e){}
-      try {
-        genre = title.info.genre[0];
-      }catch(e){}
-      try {
-        date = title.info.release_date;
-      }catch(e){}
-      try {
-        cast = title.info.talent.cast || [];
-      }catch(e){}
-
-      //TODO:
-      length = "";
-
-      // console.log("Offerings: " + Object.keys(offerings));
-
-      const params = {
-        director,
-        genre,
-        date,
-        cast,
-        title,
-        offerings,
-        date
-      };
-      res.set('Cache-Control', 'no-cache');
-      res.render(view, params);
-    }catch(e){
-      console.error(e);
-      var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
-      res.send(template, 404);
-    }
-  });
-
-
   const appFunc = async function(req, res) {
     let sessionTag = CreateID(8);
     const params = {
@@ -370,3 +314,5 @@ const main = async () => {
 
 
 main();
+
+exports.app = app;

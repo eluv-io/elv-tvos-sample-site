@@ -36,6 +36,6 @@
 	<key>TV_BASE_URL</key>
 	<string>$(TV_BASE_URL)</string>
 	<key>UIUserInterfaceStyle</key>
-	<string>Automatic</string>
+	<string>Dark</string>
 </dict>
 </plist>
