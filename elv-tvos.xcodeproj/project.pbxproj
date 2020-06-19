@@ -31,6 +31,7 @@
 		9CB9DC0221AF3355006AACB3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9CB9DC0421AF3355006AACB3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9CB9DC0A21AF33A2006AACB3 /* Server */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Server; sourceTree = "<group>"; };
+		B01E21F42498668500BB2033 /* EluvioTVOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = EluvioTVOS.entitlements; path = EluvioTVOS/EluvioTVOS.entitlements; sourceTree = "<group>"; };
 		B03C32B424462DFD00CFFC97 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		B03C32B524462E8D00CFFC97 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		B08481C82441793800CA062B /* start.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = start.js; sourceTree = "<group>"; };
@@ -63,6 +64,7 @@
 		9CB9DBF321AF3354006AACB3 = {
 			isa = PBXGroup;
 			children = (
+				B01E21F42498668500BB2033 /* EluvioTVOS.entitlements */,
 				B03C32B524462E8D00CFFC97 /* Release.xcconfig */,
 				B03C32B424462DFD00CFFC97 /* Debug.xcconfig */,
 				D0513C20D051D04000000001 /* README.md */,
@@ -315,18 +317,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_ENTITLEMENTS = EluvioTVOS/EluvioTVOS.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = UF8453V5DX;
+				DEVELOPMENT_TEAM = 2KH8KC3MMX;
 				INFOPLIST_FILE = "$(SRCROOT)/elv-tvos/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.eluvio.tvos-sample-site";
+				PRODUCT_BUNDLE_IDENTIFIER = com.eluvio.tv;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "TVOS Distribution Profile";
+				PROVISIONING_PROFILE_SPECIFIER = "Wayne Tran Apple TV DEV";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
 				TVOS_DEPLOYMENT_TARGET = 12.0;
@@ -338,18 +341,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_ENTITLEMENTS = EluvioTVOS/EluvioTVOS.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = UF8453V5DX;
+				DEVELOPMENT_TEAM = 2KH8KC3MMX;
 				INFOPLIST_FILE = "$(SRCROOT)/elv-tvos/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.eluvio.tvos-sample-site";
+				PRODUCT_BUNDLE_IDENTIFIER = com.eluvio.tv;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "TVOS Distribution Profile";
+				PROVISIONING_PROFILE_SPECIFIER = "Wayne Tran Apple TV DEV";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
 				TVOS_DEPLOYMENT_TARGET = 12.0;
