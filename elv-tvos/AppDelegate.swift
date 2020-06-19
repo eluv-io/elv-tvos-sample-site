@@ -67,7 +67,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate, TVApplicationControllerDe
         
         appController = TVApplicationController(context: appControllerContext, window: window, delegate: self)
         
+        // register to observe notifications from the store
+        NotificationCenter.default.addObserver(self, selector: #selector(onUbiquitousKeyValueStoreDidChangeExternally(notification:)), name: NSUbiquitousKeyValueStore.didChangeExternallyNotification, object: NSUbiquitousKeyValueStore.default)
+        
+        // Download any changes since the last time this instance of the app was launched
+        NSUbiquitousKeyValueStore.default.synchronize()
+        
         return true
+    }
+    
+    @objc func onUbiquitousKeyValueStoreDidChangeExternally(notification:Notification)
+    {
+        print("Storage Changed!")
     }
     
     func applicationWillResignActive(_ application: UIApplication) {

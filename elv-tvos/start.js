@@ -81,19 +81,46 @@ const redeemCode = async (config,code) => {
   try{
     const hash = Hash(code);
     await fabric.init({configUrl,privateKey});
-    let siteSelector = await fabric.client.LatestVersionHash({objectId: siteSelectorId});
-
-    const siteInfo = await fabric.client.ContentObjectMetadata({
+    let client = fabric.client;
+    let siteSelector = await client.LatestVersionHash({objectId: siteSelectorId});
+    const isGlobalSelector = (await client.ContentObjectMetadata({
       versionHash: siteSelector,
-      metadataSubtree: `public/codes/${hash}`
-    });
+      metadataSubtree: "public/site_selector_type"
+    })) === "global";
 
-    if(!siteInfo) {
-      this.SetError("Invalid code");
-      return null;;
+    let codeInfo;
+    if(isGlobalSelector) {
+      // Get unresolved meta to determine length of selector list
+      const selectorList = await client.ContentObjectMetadata({
+        versionHash: siteSelector,
+        metadataSubtree: "public/site_selectors"
+      });
+
+      for(let i = 0; i < selectorList.length; i++) {
+        codeInfo = await client.ContentObjectMetadata({
+          versionHash: siteSelector,
+          metadataSubtree: `public/site_selectors/${i}/${hash}`
+        });
+
+        if(codeInfo && codeInfo.ak) {
+          break;
+        }
+      }
+    } else {
+      codeInfo = await client.ContentObjectMetadata({
+        versionHash: siteSelector,
+        metadataSubtree: `public/codes/${hash}`
+      });
     }
-    siteId = siteInfo.sites[0].siteId; 
-    encryptedPrivateKey = atob(siteInfo.ak);
+
+    if(!codeInfo || !codeInfo.ak) {
+      return false;
+    }
+
+    console.log("CodeInfo: " + JQ(codeInfo));
+
+    siteId = codeInfo.sites[0].siteId; 
+    encryptedPrivateKey = atob(codeInfo.ak);
 
   }catch(e){
     console.error("Error reading site selector:");
@@ -167,19 +194,35 @@ const main = async () => {
       let site = redeemSites[code];
       if(isEmpty(site)){
         site = await redeemCode(Config,code);
+        if(!site){
+          throw "Could not get Site from code: " + code;
+        }
         redeemSites[code] = site;
       }
 
       let titles = site.titles || [];
       let playlists = site.playlists || [];
+      let synopsis = site.info ? site.info.synopsis : "";
+      let titleColor = "rgb(236,245,255)";
+
+      let site_info = {
+        display_title: site.display_title,
+        title_logo: site.title_logo,
+        landscape_logo: site.landscape_logo,
+        info: {
+          synopsis: synopsis
+        }
+      }
 
       const params = {
         title_logo: site.title_logo,
+        title_color: titleColor,
         display_title: site.display_title,
         playlists: playlists,
         titles: titles,
         eluvio_logo: serverHost + ":" + serverPort + "/logo.png",
         site_index: code,
+        site_info: JSON.stringify(site_info),
         date
       };
 

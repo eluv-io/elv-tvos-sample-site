@@ -12,6 +12,7 @@ var launchOptions;
 var updateInterval = 60000;
 var sessionTag;
 var configUrl;
+var sites;
 
 var getJSON = function (url) {
   return new Promise(function (resolve, reject) {
@@ -299,6 +300,16 @@ async function loadRedeemSite(code) {
   let resolvedText = resolveTemplate(docText);
   console.log("\n\nResolvedText: " + docText);
   let document = replaceTemplate(resolvedText);
+  const siteInfoEl = document.getElementById("site_info");
+  const value = siteInfoEl.getAttribute("data-value");
+  const siteInfo = JSON.parse(value);
+  console.log("SiteInfo Node: " + siteInfoEl.nodeName);
+  console.log("SiteInfo Value: " + value);
+  if (siteInfo && localStorage) {
+    sites[code] = siteInfo;
+    localStorage.setItem("codes", JSON.stringify(sites));
+    console.log("SiteInfo saved");
+  }
 }
 
 async function loadSite(index) {
@@ -326,6 +337,17 @@ App.onLaunch = function (options) {
   configUrl = "{{CONFIG_URL}}";
   updateInterval = "{{UPDATE_INTERVAL}}";
   sessionTag = "{{SESSION_TAG}}";
+  if (localStorage) {
+    sites = localStorage.getItem("codes");
+    if (!sites) {
+      sites = {};
+    } else {
+      sites = JSON.parse(sites);
+      console.log("Retrieved sites from storage: " + JSON.stringify(sites));
+    }
+  } else {
+    sites = {};
+  }
 
   var javascriptFiles = [`${baseURL}/handlebars.js`];
 

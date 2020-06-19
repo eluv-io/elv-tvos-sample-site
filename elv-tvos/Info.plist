@@ -29,12 +29,12 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>TV_BASE_URL</key>
+	<string>$(TV_BASE_URL)</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>
 	</array>
-	<key>TV_BASE_URL</key>
-	<string>$(TV_BASE_URL)</string>
 	<key>UIUserInterfaceStyle</key>
 	<string>Dark</string>
 </dict>
