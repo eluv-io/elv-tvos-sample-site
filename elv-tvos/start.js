@@ -7,7 +7,7 @@ var Config = require('./config.json');
 var path = require('path');
 var atob = require('atob');
 var {JQ,isEmpty,CreateID} = require('./server/utils')
-var getRepoInfo = require('git-repo-info');
+fs = require('fs');
 
 var app = express();
 
@@ -326,14 +326,16 @@ const main = async () => {
 
   //Serve the repo information
   app.get('/info', async function(req, res) {
-    try {
-      let info = JQ(getRepoInfo());
+    fs.readFile('./version.txt', 'utf8', function (err,info) {
+      if (err) {
+        console.error(err);
+        res.send(e, 404);
+        return err;
+      }
       res.send(info);
-    }catch(e){
-      console.error(e);
-      res.send(e, 404);
-    }
+    });
   });
+
   const appFunc = async function(req, res) {
     let sessionTag = CreateID(8);
     const params = {
