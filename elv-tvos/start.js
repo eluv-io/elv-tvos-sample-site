@@ -175,7 +175,7 @@ const main = async () => {
     if(!isEmpty(sites)){
       const params = {
         sites,
-        eluvio_logo: serverHost + ":" + serverPort + "/logo.png",
+        eluvio_logo: serverHost + "/logo.png",
         date
       };
       res.set('Cache-Control', 'no-cache');
@@ -222,7 +222,7 @@ const main = async () => {
         display_title: site.display_title,
         playlists: playlists,
         titles: titles,
-        eluvio_logo: serverHost + ":" + serverPort + "/logo.png",
+        eluvio_logo: serverHost + "/logo.png",
         site_index: code,
         site_info: JSON.stringify(site_info),
         date
@@ -255,7 +255,7 @@ const main = async () => {
         display_title: site.display_title,
         playlists: playlists,
         titles: titles,
-        eluvio_logo: serverHost + ":" + serverPort + "/logo.png",
+        eluvio_logo: serverHost + "/logo.png",
         site_index: index,
         date
       };
