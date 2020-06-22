@@ -7,8 +7,9 @@ var Config = require('./config.json');
 var path = require('path');
 var atob = require('atob');
 var {JQ,isEmpty,CreateID} = require('./server/utils')
-fs = require('fs');
-
+var fs = require('fs');
+var logger = require('./server/logger');
+var Sugar = require('sugar');
 var app = express();
 
 var sites = [];
@@ -268,8 +269,8 @@ const main = async () => {
     }
   });
 
-    //Serve the title details from versionHash tvml template
-    app.get('/detailhash.hbs/:id', async function(req, res) {
+  //Serve the title details from versionHash tvml template
+  app.get('/detailhash.hbs/:id', async function(req, res) {
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
       let id = req.params.id;
@@ -304,8 +305,6 @@ const main = async () => {
       //TODO:
       length = "";
 
-      console.log("Offerings: " + Object.keys(offerings));
-
       const params = {
         director,
         genre,
@@ -318,22 +317,46 @@ const main = async () => {
       res.set('Cache-Control', 'no-cache');
       res.render(view, params);
     }catch(e){
-      console.error(e);
+      logger.error(JQ(err));
       var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
       res.send(template, 404);
     }
   });
 
-  //Serve the repo information
+  //Serve the version information
   app.get('/info', async function(req, res) {
-    fs.readFile('./version.txt', 'utf8', function (err,info) {
-      if (err) {
-        console.error(err);
-        res.send(e, 404);
-        return err;
-      }
-      res.send(info);
-    });
+    try{
+      fs.readFile('./version.txt', 'utf8', function (err,info) {
+        if (err) {
+          logger.error(JQ(err));
+          res.send(err, 404);
+          return err;
+        }
+        res.send(info);
+      });
+    }catch(err){
+      logger.error("Could not read version.txt "+err);
+      res.send(err, 404);
+    }
+  });
+
+  //Serve the logs information
+  app.get('/log', async function(req, res) {
+    try{
+      let formatted = Sugar.Date.format(new Date(), '%Y-%m-%d');
+      let logfile = `./static/logs/elv-tvos-${formatted}.log`;
+      fs.readFile(logfile, 'utf8', function (err,info) {
+        if (err) {
+          logger.error("Could not read file " + logfile + "\n" +err);
+          res.send(err, 404);
+          return err;
+        }
+        res.send(info);
+      });
+    }catch(err){
+      logger.error("Could not read log file: " +err);
+      res.send(err, 404);
+    }
   });
 
   const appFunc = async function(req, res) {
@@ -363,8 +386,7 @@ const main = async () => {
     next(err);
   });
 
-  console.log("Server running on port: " + serverPort);
-  
+  logger.info("Server running on port: " + serverPort);
   app.listen(serverPort);
 }
 

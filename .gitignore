@@ -28,3 +28,5 @@ elv-tvos/config.json
 elv-tvos/config.json.*
 
 elv-tvos/version.txt
+
+elv-tvos/static/logs
