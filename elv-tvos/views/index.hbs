@@ -1,40 +1,47 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <document>
-   <listTemplate>
-      <banner>
-         <title>Eluvio TV</title>
-      </banner>
+    <listTemplate>
+        <background>
+            <img src="{{eluvio_background}}"/>
+        </background>
       <list>
-         <header>
-            <title>Available Options</title>
-         </header>
          <section>
             <listItemLockup onselect="loadRedeemForm()">
                 <decorationImage src="resource://button-more" />
                 <title>Redeem Site Code</title>
                 <relatedContent>
                     <lockup>
-                        <img src="{{eluvio_logo}}" width="1200" height="675" />
+                        <img src="" height="1000" />
                         <title>Redeem Site Code</title>
                         <description>If you have an access code, enter it here to load the Site.</description>
                     </lockup>
                 </relatedContent>
             </listItemLockup>
 
-            {{#each sites}}
-                <listItemLockup onselect="loadSite({{@index}})">
-                <decorationImage src="resource://button-preview" />
-                <title>{{display_title}}</title>
+            <listItemLockup onselect="loadView('networks.hbs')">
+                <decorationImage src="resource://button-more" />
+                <title>Choose Network ({{network}})</title>
                 <relatedContent>
                     <lockup>
-                        <img src="{{landscape_logo}}" width="1200" height="675" />
-                        <title>{{display_title}}</title>
-                        <description>{{info.synopsis}}</description>
+                        <img src="" height="1000"/>
+                        <title>Choose Network</title>
+                        <description>Use this option to switch Fabric networks.</description>
                     </lockup>
                 </relatedContent>
-                </listItemLockup>
-            {{/each}}
+            </listItemLockup>
+
+            <listItemLockup onselect="loadView('sites.hbs')">
+                <decorationImage src="resource://button-preview" />
+                <title>Available Sites</title>
+                <relatedContent>
+                    <lockup>
+                        <img src="" height="1000" />
+                        <title>Available Sites</title>
+                        <description>Use this option to view sites you have access to.</description>
+                    </lockup>
+                </relatedContent>
+            </listItemLockup>
          </section>
       </list>
-   </listTemplate>
+    </listTemplate>
 </document>

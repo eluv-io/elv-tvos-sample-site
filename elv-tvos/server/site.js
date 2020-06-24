@@ -96,9 +96,12 @@ class Site {
             Object.keys(list || {}).map(async titleSlug => {
               try {
                 let title = list[titleSlug];
-
                 title.displayTitle = title.display_title || title.title || "";
                 title.versionHash = title["."].source;
+                if(!title.versionHash){
+                  console.error("Error loading title: " + titleSlug + " " + JQ(title));
+                  return;
+                }
                 title.objectId = this.client.utils.DecodeVersionHash(title.versionHash).objectId;
                 title.titleId = Id.next();
                 const titleLinkPath = `public/asset_metadata/playlists/${playlistSlug}/list/${titleSlug}`;
@@ -107,8 +110,12 @@ class Site {
                   await this.client.LinkUrl({versionHash, linkPath: titleLinkPath});
                 title.playoutOptionsLinkPath = UrlJoin(titleLinkPath, "sources", "default");
               
-                title.availableOfferings = await this.getAvailableOfferings(title);
-
+                //For lazy loading the offerings
+                title.getAvailableOfferings = async () =>{
+                  title.availableOfferings = await this.getAvailableOfferings(title);
+                  console.log("AvailableOfferings: " + JQ(title.availableOfferings));
+                }
+                
                 Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
 
                 titles[parseInt(title.order)] = title;
@@ -167,8 +174,11 @@ class Site {
           title.baseLinkUrl =
             await this.client.LinkUrl({versionHash, linkPath});
 
-          title.availableOfferings = await this.getAvailableOfferings(title);
-          // console.log("AvailableOfferings: " + JQ(title.availableOfferings));
+          //For lazy loading the offerings
+          title.getAvailableOfferings = async () =>{
+            title.availableOfferings = await this.getAvailableOfferings(title);
+            console.log("AvailableOfferings: " + JQ(title.availableOfferings));
+          }
 
           Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
 
@@ -195,9 +205,10 @@ class Site {
       if(!isEmpty(this.siteInfo.allowed_offerings)){
         allowedOfferings = this.siteInfo.allowed_offerings;
       }
-
+      
       for (const key in availableOfferings) {
         let offering = availableOfferings[key];
+        
         let playoutOptions = await this.client.PlayoutOptions({
           libraryId: this.siteLibraryId,
           objectId: this.siteId,
@@ -208,6 +219,7 @@ class Site {
         });
         let playoutUrl = (playoutOptions.hls.playoutMethods.clear || playoutOptions.hls.playoutMethods["sample-aes"]).playoutUrl;
         offering.videoUrl = this.replaceTemplate(playoutUrl,true);
+
         if(offering.display_name == "default"){
           offering.display_name = "Watch";
         }
@@ -216,6 +228,8 @@ class Site {
         }
         newAvailableOfferings[key] = offering;
       }
+      
+
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error(`Failed to get offerings for ${title.displayTitle}: `);
@@ -248,8 +262,8 @@ class Site {
     }
     portraitUrl = this.replaceTemplate(portraitUrl);
 
-    imageUrl = await this.client.ContentObjectImageUrl({versionHash});
-    imageUrl = this.replaceTemplate(imageUrl);
+    //imageUrl = await this.client.ContentObjectImageUrl({versionHash});
+    //imageUrl = this.replaceTemplate(imageUrl);
 
     posterUrl = landscapeUrl;
 
@@ -257,7 +271,7 @@ class Site {
       posterUrl,
       landscapeUrl,
       portraitUrl,
-      imageUrl
+      //imageUrl
     };
   }
 

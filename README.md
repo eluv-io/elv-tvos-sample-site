@@ -18,8 +18,16 @@ Create elv-tvos/config.json with your configuration values.
 
 ```
 {
-  "configUrl": "https://main.net955305.contentfabric.io/config",
-  "siteSelectorId": "iq__xxxx",
+  "networks": {
+    "main": {
+      "configUrl": "https://main.net955305.contentfabric.io/config",
+      "siteSelectorId": "iq__XXX"
+    },
+    "testing": {
+      "configUrl": "https://xxxxxx",
+      "siteSelectorId": "iq__XXX"
+    }
+  },
   "serverPort": 4001,
   "serverHost": "http://127.0.0.1",
   "updateInterval": 60000

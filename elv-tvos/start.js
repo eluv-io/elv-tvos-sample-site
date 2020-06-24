@@ -12,7 +12,7 @@ var logger = require('./server/logger');
 var Sugar = require('sugar');
 var app = express();
 
-var sites = [];
+var networkSites = {};
 var redeemSites = {};
 var date = "";
 
@@ -21,18 +21,35 @@ const Hash = (code) => {
   return chars.reduce((sum, char, i) => (chars[i + 1] ? (sum * 2) + char * chars[i+1] * (i + 1) : sum + char), 0).toString();
 };
 
+const refreshSites = async () =>{
+  for (const network in Config.networks) {
+    let value = Config.networks[network];
+    console.log(`${network}: ${JQ(value)}`);
+    findSites(value).then(
+      (sites)=>{
+        console.log("Found sites: " + JQ(sites.length));
+        networkSites[network] = sites;
+      },
+      (err)=>{
+        logger.error("Error find sites for network " + network + ".\n" + err);
+      }
+    )
+  }
 
-const refreshSites = async (config) =>{
-  let configUrl = config.configUrl;
+}
+
+const findSites = async (network) =>{
+  // console.log("findSites: " + JQ(network));
+  let configUrl = network.configUrl;
   let privateKey = process.env.PRIVATEKEY;
   if(isEmpty(configUrl)){
-    console.error("configUrl not set in config.");
-    process.exit(1);
+    logger.error("configUrl not set for network.");
+    return [];
   }
 
   if(isEmpty(privateKey)){
-    console.error("Please 'export PRIVATEKEY=XXXX' before running.");
-    process.exit(1);
+    logger.error("Please 'export PRIVATEKEY=XXXX' before running.");
+    return [];
   }
   
   let fabric = new Fabric;
@@ -49,31 +66,32 @@ const refreshSites = async (config) =>{
           newSites.push(newSite.siteInfo);
       })
     );
-    // console.log("Sites: " + JQ(sites));
     date = moment().format('MM/DD/YYYY h:mm:ss a');
-    sites = newSites;
+    return newSites;
   }catch(e){
     console.error(e);
+    return [];
   }
 }
 
-const redeemCode = async (config,code) => {
-  let configUrl = config.configUrl;
+const redeemCode = async (network,code) => {
+  // console.log("RedeemCode " + JQ(network));
+  let configUrl = network.configUrl;
   let privateKey = process.env.PRIVATEKEY;
-  let siteSelectorId = config.siteSelectorId;
+  let siteSelectorId = network.siteSelectorId;
 
   if(isEmpty(configUrl)){
-    console.error("configUrl not set in config.");
+    logger.error("RedeemCode: configUrl not set in config.");
     return null;
   }
 
   if(isEmpty(privateKey)){
-    console.error("Please 'export PRIVATEKEY=XXXX' before running.");
+    logger.error("RedeemCode: No privateKey set.");
     return null;
   }
 
   if(isEmpty(siteSelectorId)){
-    console.error("siteSelectorId not set in config.");
+    logger.error("siteSelectorId not set in config.");
     return null;
   }
 
@@ -153,9 +171,9 @@ const main = async () => {
   app.set('view engine', 'hbs');
   app.set('views', path.join(__dirname, '/views'));
 
-  await refreshSites(Config);
+  refreshSites();
   //Refresh the Site every updateInterval
-  setInterval(()=>{refreshSites(Config)}, updateInterval);
+  setInterval(()=>{refreshSites()}, updateInterval);
 
   app.get('/settings.hbs', async function(req, res) {
     //Keep the templates for the device to inject
@@ -171,35 +189,49 @@ const main = async () => {
       res.render("settings", params);
   });
 
-  app.get('/index.hbs', async function(req, res) {
-    if(!isEmpty(sites)){
+  app.get('/index.hbs/:network', async function(req, res) {
+      let network = req.params.network;
+      if(!network){
+        network = "main";
+      }
       const params = {
-        sites,
         eluvio_logo: serverHost + "/logo.png",
+        eluvio_background: serverHost + "/eluvio_background.png",
+        network,
         date
       };
       res.set('Cache-Control', 'no-cache');
       res.render("index", params);
-    }else{
-      var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
-      res.send(template, 404);
-    }
   });
 
-      //Serve the site tvml template
-  app.get(['/redeemsite.hbs/:code', '/redeemwatch.hbs/:code'], async function(req, res) {
+  //Serve the site tvml template
+  app.get(['/redeemsite.hbs/:network/:code', '/redeemwatch.hbs/:network/:code'], async function(req, res) {
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
       let code = req.params.code;
-      console.log("Route "+ view + "/" + code);
+      let network = req.params.network;
 
-      let site = redeemSites[code];
-      if(isEmpty(site)){
-        site = await redeemCode(Config,code);
+      console.log("Route "+ view + "/" + network + "/" + code);
+      if(!network){
+        throw "No network for request";
+      }
+
+      let site = null;
+      
+      try{
+        site = redeemSites[network][code];
+      }catch(e){}
+
+      if(!site){
+        site = await redeemCode(Config.networks[network],code);
+        site.network = network;
         if(!site){
           throw "Could not get Site from code: " + code;
         }
-        redeemSites[code] = site;
+        if(!redeemSites[network]){
+          redeemSites[network] = {};
+        }
+        redeemSites[network][code] = site;
       }
 
       let titles = site.titles || [];
@@ -225,7 +257,8 @@ const main = async () => {
         eluvio_logo: serverHost + "/logo.png",
         site_index: code,
         site_info: JSON.stringify(site_info),
-        date
+        date,
+        network
       };
 
       res.set('Cache-Control', 'no-cache');
@@ -238,12 +271,14 @@ const main = async () => {
   });
 
 
-    //Serve the site tvml template
-  app.get(['/site.hbs/:index','/watch.hbs/:index'], async function(req, res) {
+  //Serve the site tvml template
+  app.get(['/site.hbs/:network/:index','/watch.hbs/:network/:index'], async function(req, res) {
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
       let index = req.params.index;
-      console.log("Route "+ view + "/" + index);
+      let network = req.params.network;
+      console.log("Route "+ view + "/" + network + "/" + view);
+      let sites = networkSites[network];
       let site = sites[index];
       let titles = site.titles || [];
       let playlists = site.playlists || [];
@@ -257,6 +292,7 @@ const main = async () => {
         titles: titles,
         eluvio_logo: serverHost + "/logo.png",
         site_index: index,
+        network,
         date
       };
 
@@ -264,7 +300,7 @@ const main = async () => {
       res.render(view, params);
     }catch(e){
       console.error(e);
-      var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
+      var template = '<document><loadingTemplate><activityIndicator><text>Error Fetching Site.</text></activityIndicator></loadingTemplate></document>';
       res.send(template, 404);
     }
   });
@@ -287,6 +323,9 @@ const main = async () => {
       let length = "";
       let offerings = {};
       try {
+        if(!title.availableOfferings){
+          await title.getAvailableOfferings();
+        }
         offerings = title.availableOfferings || {};
       }catch(e){}
       try {
@@ -321,6 +360,54 @@ const main = async () => {
       var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
       res.send(template, 404);
     }
+  });
+
+  //Serve the networks tvml template
+  app.get('/networks.hbs/:network', async function(req, res) {
+    try {
+      let networks = Object.keys(Config.networks);
+      const params = {
+        eluvio_logo: serverHost + "/logo.png",
+        eluvio_background: serverHost + "/eluvio_background.png",
+        networks
+      };
+
+      res.set('Cache-Control', 'no-cache');
+      res.render('networks', params);
+    }catch(e){
+      console.error(e);
+      var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
+      res.send(template, 404);
+    }
+  });
+
+  //Serve the sites tvml template
+  app.get('/sites.hbs/:network', async function(req, res) {
+    try {
+      let network = req.params.network;
+      logger.info("Route /sites.hbs/" + network);
+
+      let sites = networkSites[network];
+
+      if(!sites || sites.length == 0){
+        sites = await findSites(network);
+        networkSites[network] = sites;
+      }
+
+      const params = {
+        sites,
+        eluvio_logo: serverHost + "/logo.png",
+        eluvio_background: serverHost + "/eluvio_background.png",
+        network: "{{network}}",
+        date
+      };
+      res.set('Cache-Control', 'no-cache');
+      res.render("sites", params);
+    }catch(e){
+        console.error(e);
+        var template = '<document><loadingTemplate><activityIndicator><text>Could not load sites view.</text></activityIndicator></loadingTemplate></document>';
+        res.send(template, 404);
+      }
   });
 
   //Serve the version information
@@ -360,15 +447,19 @@ const main = async () => {
   });
 
   const appFunc = async function(req, res) {
-    let sessionTag = CreateID(8);
-    const params = {
-      CONFIG_URL: Config.configUrl,
-      UPDATE_INTERVAL: updateInterval,
-      SESSION_TAG: sessionTag,
-      SITES: sites
-    };
-    res.type('application/json');
-    res.render('application', params);
+    try{
+      let sessionTag = CreateID(8);
+      const params = {
+        CONFIG: JSON.stringify(Config),
+        UPDATE_INTERVAL: updateInterval,
+        SESSION_TAG: sessionTag
+      };
+      res.type('text');
+      res.render('application', params);
+    }catch(err){
+      logger.error("Error serving application.js "+err);
+      res.send(err, 500);
+    }
   };
 
   //Serve the application.js template

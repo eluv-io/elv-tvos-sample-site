@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<document>
+  <paradeTemplate>
+      <background>
+          <img src="{{eluvio_background}}"/>
+      </background>
+      <list >
+         <header>
+            <title>Choose Network</title>
+         </header>
+         <section>
+            {{#each networks}}
+              <listItemLockup onselect="loadNetwork('{{this}}')">
+                  <decorationImage src="resource://button-more" />
+                  <title>{{this}}</title>
+              </listItemLockup>
+            {{/each}}
+         </section>
+      </list>
+  </paradeTemplate>
+</document>
