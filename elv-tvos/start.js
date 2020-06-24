@@ -27,11 +27,11 @@ const refreshSites = async () =>{
     console.log(`${network}: ${JQ(value)}`);
     findSites(value).then(
       (sites)=>{
-        console.log("Found sites: " + JQ(sites.length));
+        // console.log("Found sites: " + JQ(sites.length));
         networkSites[network] = sites;
       },
       (err)=>{
-        logger.error("Error find sites for network " + network + ".\n" + err);
+        logger.error("Error finding sites for network " + network + ".\n" + err);
       }
     )
   }
@@ -69,7 +69,7 @@ const findSites = async (network) =>{
     date = moment().format('MM/DD/YYYY h:mm:ss a');
     return newSites;
   }catch(e){
-    console.error(e);
+    // console.error(e);
     return [];
   }
 }
@@ -137,7 +137,7 @@ const redeemCode = async (network,code) => {
       return false;
     }
 
-    console.log("CodeInfo: " + JQ(codeInfo));
+    //console.log("CodeInfo: " + JQ(codeInfo));
 
     siteId = codeInfo.sites[0].siteId; 
     encryptedPrivateKey = atob(codeInfo.ak);

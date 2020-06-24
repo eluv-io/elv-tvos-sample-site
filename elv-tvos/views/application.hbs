@@ -379,8 +379,7 @@ async function loadNetwork(value) {
     localStorage.setItem('network', value);
     network = value;
   }
-  navigationDocument.clear();
-  loadView('index.hbs');
+  App.reload();
 }
 
 async function loadRedeemSite(code) {
