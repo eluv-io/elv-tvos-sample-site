@@ -390,7 +390,7 @@ const main = async () => {
       let sites = networkSites[network];
 
       if(!sites || sites.length == 0){
-        sites = await findSites(network);
+        sites = await findSites(Config.networks[network]);
         networkSites[network] = sites;
       }
 
