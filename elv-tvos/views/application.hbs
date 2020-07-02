@@ -7,6 +7,7 @@ var baseURL;
 var nodes;
 var currentHost;
 var launchOptions;
+var regionSetting = 'auto';
 
 //Templates injected by the server
 var updateInterval = 60000;
@@ -28,6 +29,22 @@ var getJSON = function (url) {
     };
     xhr.send();
   });
+};
+
+var createAlert = function (title, description) {
+  var alertString = `<?xml version="1.0" encoding="UTF-8" ?>
+  <document>
+    <alertTemplate>
+      <title>${title}</title>
+      <description>${description}</description>
+      <button onselect="dismissModal()">
+        <text>OK</text>
+      </button>
+    </alertTemplate>
+  </document>`;
+  var parser = new DOMParser();
+  var alertDoc = parser.parseFromString(alertString, 'application/xml');
+  return alertDoc;
 };
 
 function loadingTemplate() {
@@ -108,6 +125,7 @@ function resolveTemplate(text) {
     session_id: sessionTag,
     system_version: Device.systemVersion,
     system_lang: Settings.language,
+    region: regionSetting
   });
   return resolved;
 }
@@ -316,6 +334,73 @@ async function refreshMainPage() {
   const newDoc = await fetch(baseURL + extension);
   const oldMain = navigationDocument.documents[0];
   navigationDocument.replaceDocument(newDoc, oldMain);
+}
+
+async function loadRegion(){
+  console.log('loadRegion');
+  const documentURL = baseURL + "region.hbs";
+  let docText = await fetch(documentURL, "text");
+  console.log("Site text loaded: " + docText);
+  let resolvedText = resolveTemplate(docText);
+  console.log("\n\nResolvedText: " + docText);
+  let document = pushTemplate(resolvedText);
+}
+
+async function setAutoRegion(){
+  try{
+    let data = await getJSON(configUrl);
+    console.log("Configuration data: " + JSON.stringify(data, null, 2));
+    nodes = data.network.seed_nodes.fabric_api;
+    console.log("Fabric Nodes: " + JSON.stringify(nodes, null, 2));
+    currentHost = nodes[0];
+    regionSetting = 'auto';
+    navigationDocument.popToRootDocument();
+  }catch(e){
+    var alert = createAlert(
+      "Server Error",
+      "There was an error getting the local nodes."
+    );
+    navigationDocument.presentModal(alert);
+  }
+}
+
+async function setRegion(region){
+  console.log("setRegion " + region);
+  if(!region){
+    return;
+  }
+  if(region === 'auto'){
+    await setAutoRegion();
+    return;
+  }
+
+  let url = baseURL + `regionNodes/${region}`;
+  getJSON(url).then(
+    function (data) {
+      try {
+        console.log("Configuration data: " + JSON.stringify(data, null, 2));
+        nodes = data.fabricURIs;
+        console.log("Fabric Nodes: " + JSON.stringify(nodes, null, 2));
+        currentHost = nodes[0];
+        regionSetting = region;
+        navigationDocument.popToRootDocument();
+      } catch (e) {
+        var alert = createAlert(
+          "Server Error",
+          "There was an error loading the site."
+        );
+        navigationDocument.presentModal(alert);
+        throw "There was an error loading the site.";
+      }
+    },
+    function (status) {
+      var alert = createAlert(
+        "Server Error",
+        "There was an error contacting the server."
+      );
+      navigationDocument.presentModal(alert);
+    }
+  );
 }
 
 App.onLaunch = function (options) {

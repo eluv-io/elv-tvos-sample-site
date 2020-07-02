@@ -12,6 +12,12 @@
         <infoTable>
             <info>
                 <header>
+                    <title>Region: </title>
+                </header>
+                <text>{{region}}</text>
+            </info>
+            <info>
+                <header>
                     <title>Fabric Node: </title>
                 </header>
                 <text>{{fabric_node}}</text>
@@ -47,5 +53,10 @@
                 <text>{{system_lang}}</text>
             </info>
         </infoTable>
+        <row>
+         <button onselect='loadRegion()'>
+            <text>Set Region</text>
+         </button>
+      </row>
     </descriptiveAlertTemplate>
 </document>

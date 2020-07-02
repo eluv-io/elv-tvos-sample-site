@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "serve": "node start.js",
+    "serve": "node --trace-uncaught start.js",
     "start": "npm run serve"
   },
   "keywords": [],

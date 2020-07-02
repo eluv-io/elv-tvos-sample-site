@@ -136,7 +136,8 @@ const main = async () => {
       app_id:"{{app_id}}",
       app_version:"{{app_version}}",
       system_version:"{{system_version}}",
-      system_lang:"{{system_lang}}"
+      system_lang:"{{system_lang}}",
+      region:"{{region}}"
     };
       res.set('Cache-Control', 'no-cache');
       res.render("settings", params);
@@ -335,6 +336,56 @@ const main = async () => {
     }
   });
 
+  //Serve the site tvml template
+  app.get(['/region.hbs'], async function(req, res) {
+    try {
+      let view = req.path.split('.').slice(0, -1).join('.').substr(1);
+
+      console.log("Route "+ view);
+      const params = {
+        map: serverHost + ":" + serverPort + "/map.png",
+        "map_na-west-north": serverHost + ":" + serverPort + "/map.png",
+        "map_na-west-south": serverHost + ":" + serverPort + "/map.png",
+        "map_na-east": serverHost + ":" + serverPort + "/map.png",
+        "map_eu-west": serverHost + ":" + serverPort + "/map.png",
+        "map_eu-east": serverHost + ":" + serverPort + "/map.png",
+        "map_as-east": serverHost + ":" + serverPort + "/map.png",
+        "map_au-east": serverHost + ":" + serverPort + "/map.png",        
+      };
+
+      res.set('Cache-Control', 'no-cache');
+      res.render(view, params);
+    }catch(e){
+      console.error(e);
+      var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
+      res.send(template, 404);
+    }
+  });
+
+  app.get('/regionNodes/:region', async function(req, res) {
+    let region = req.params.region;
+    console.log("Route "+  + "/regionNodes/" + region);
+    res.type('application/json');
+
+    if(!region){
+      res.send('', 404);
+      return;
+    }
+    let fabric = new Fabric;
+    try{
+      let privateKey = process.env.PRIVATEKEY;
+      let configUrl = Config.configUrl;
+      await fabric.init({configUrl,privateKey});
+      await fabric.client.UseRegion({region});
+      let nodes = await fabric.client.Nodes();
+      console.log("Nodes: " + JQ(nodes));
+      res.send(nodes);
+    }catch(e){
+      console.error('Could not get region nodes.');
+      res.send('', 404);
+      return;
+    }
+  });
 
   const appFunc = async function(req, res) {
     let sessionTag = CreateID(8);
