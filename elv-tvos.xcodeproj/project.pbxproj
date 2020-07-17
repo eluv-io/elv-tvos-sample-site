@@ -320,6 +320,7 @@
 				CODE_SIGN_ENTITLEMENTS = EluvioTVOS/EluvioTVOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 2KH8KC3MMX;
 				INFOPLIST_FILE = "$(SRCROOT)/elv-tvos/Info.plist";
@@ -344,6 +345,7 @@
 				CODE_SIGN_ENTITLEMENTS = EluvioTVOS/EluvioTVOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 2KH8KC3MMX;
 				INFOPLIST_FILE = "$(SRCROOT)/elv-tvos/Info.plist";

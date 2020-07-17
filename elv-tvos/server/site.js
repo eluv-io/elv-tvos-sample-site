@@ -5,9 +5,6 @@ var UrlJoin = require("url-join");
 var Id = require("@eluvio/elv-client-js/src/Id");
 var UUID = require("uuid");
 
-//VersionHash to Title database
-var AllTitles = {};
-
 class Site {
   constructor({fabric, siteId, hostTemplate="{{{host}}}"}, videoQueryTemplate="{{params}}") {
     this.fabric = fabric;
@@ -15,6 +12,7 @@ class Site {
     this.siteId = siteId;
     this.hostTemplate = hostTemplate;
     this.videoQueryTemplate = videoQueryTemplate;
+    this.titleStore = {};
   }
 
   async loadSite() {
@@ -27,6 +25,7 @@ class Site {
       const versionHash = await this.client.LatestVersionHash({objectId: this.siteId});
 
       this.siteInfo = await this.client.ContentObjectMetadata({
+        siteId: this.siteId,
         versionHash,
         metadataSubtree: "public/asset_metadata",
         resolveLinks: true,
@@ -103,7 +102,6 @@ class Site {
                   return;
                 }
                 title.objectId = this.client.utils.DecodeVersionHash(title.versionHash).objectId;
-                title.titleId = Id.next();
                 const titleLinkPath = `public/asset_metadata/playlists/${playlistSlug}/list/${titleSlug}`;
                 title.baseLinkPath = titleLinkPath;
                 title.baseLinkUrl =
@@ -113,13 +111,13 @@ class Site {
                 //For lazy loading the offerings
                 title.getAvailableOfferings = async () =>{
                   title.availableOfferings = await this.getAvailableOfferings(title);
-                  console.log("AvailableOfferings: " + JQ(title.availableOfferings));
+                  //console.log("AvailableOfferings: " + JQ(title.availableOfferings));
                 }
                 
                 Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
 
                 titles[parseInt(title.order)] = title;
-                AllTitles[title.titleId] = title;
+                this.titleStore[title.versionHash] = title;
               } catch (error) {
                 // eslint-disable-next-line no-console
                 console.error(`Failed to load title ${titleSlug} in playlist ${order} (${name})`);
@@ -166,8 +164,6 @@ class Site {
           title.versionHash = title["."].source;
           title.objectId = this.client.utils.DecodeVersionHash(title.versionHash).objectId;
 
-          title.titleId = Id.next();
-
           const linkPath = UrlJoin("public", "asset_metadata", metadataKey, index, titleKey);
           title.playoutOptionsLinkPath = UrlJoin(linkPath, "sources", "default");
           title.baseLinkPath = linkPath;
@@ -177,13 +173,13 @@ class Site {
           //For lazy loading the offerings
           title.getAvailableOfferings = async () =>{
             title.availableOfferings = await this.getAvailableOfferings(title);
-            console.log("AvailableOfferings: " + JQ(title.availableOfferings));
+            //console.log("AvailableOfferings: " + JQ(title.availableOfferings));
           }
 
           Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
 
           titles[index] = title;
-          AllTitles[title.titleId] = title;
+          this.titleStore[title.versionHash] = title;
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error(`Failed to load title ${index}`);
@@ -261,17 +257,12 @@ class Site {
       portraitUrl = this.createLink(baseLinkUrl, UrlJoin("images", "portrait", "default"));
     }
     portraitUrl = this.replaceTemplate(portraitUrl);
-
-    //imageUrl = await this.client.ContentObjectImageUrl({versionHash});
-    //imageUrl = this.replaceTemplate(imageUrl);
-
     posterUrl = landscapeUrl;
 
     return {
       posterUrl,
       landscapeUrl,
       portraitUrl,
-      //imageUrl
     };
   }
 
@@ -302,6 +293,5 @@ class Site {
 }
 
 module.exports = {
-  AllTitles,
   Site,
 }

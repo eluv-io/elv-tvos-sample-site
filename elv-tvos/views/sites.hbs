@@ -12,12 +12,12 @@
             {{#each sites}}
                 <listItemLockup onselect="loadSite({{@index}})">
                 <decorationImage src="resource://button-preview" />
-                <title>{{display_title}}</title>
+                <title>{{siteInfo.display_title}}</title>
                 <relatedContent>
                     <lockup>
                         <img src="{{landscape_logo}}" width="1200" height="675" />
-                        <title>{{display_title}}</title>
-                        <description>{{info.synopsis}}</description>
+                        <title>{{siteInfo.display_title}}</title>
+                        <description>{{siteInfo.info.synopsis}}</description>
                     </lockup>
                 </relatedContent>
                 </listItemLockup>

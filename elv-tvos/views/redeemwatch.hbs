@@ -9,7 +9,7 @@
                         <title>{{{name}}}</title>
                     </header>
                     {{#titles}}
-                        <lockup onselect="loadTitle('{{titleId}}')">
+                        <lockup onselect="loadTitle('{{@root.site_id}}','{{versionHash}}')">
                             <img src="{{posterUrl}}" width="400" height="240" />
                             <title>{{display_title}}</title>
                         </lockup>
@@ -23,7 +23,7 @@
                     <title>All Titles</title>
                 </header>
                 {{#each titles}}
-                    <lockup onselect="loadTitle('{{titleId}}')">
+                    <lockup onselect="loadTitle('{{@root.site_id}}','{{versionHash}}')">
                         <img src="{{posterUrl}}" width="400" height="240" />
                         <title>{{display_title}}</title>
                     </lockup>

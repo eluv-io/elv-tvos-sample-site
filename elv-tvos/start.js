@@ -13,7 +13,7 @@ var Sugar = require('sugar');
 var app = express();
 
 var networkSites = {};
-var redeemSites = {};
+var siteStore = {};
 var date = "";
 
 const Hash = (code) => {
@@ -24,10 +24,9 @@ const Hash = (code) => {
 const refreshSites = async () =>{
   for (const network in Config.networks) {
     let value = Config.networks[network];
-    console.log(`${network}: ${JQ(value)}`);
+    // console.log(`${network}: ${JQ(value)}`);
     findSites(value).then(
       (sites)=>{
-        // console.log("Found sites: " + JQ(sites.length));
         networkSites[network] = sites;
       },
       (err)=>{
@@ -39,17 +38,18 @@ const refreshSites = async () =>{
 }
 
 const findSites = async (network) =>{
-  // console.log("findSites: " + JQ(network));
   let configUrl = network.configUrl;
   let privateKey = process.env.PRIVATEKEY;
   if(isEmpty(configUrl)){
-    logger.error("configUrl not set for network.");
-    return [];
+    let error = "configUrl not set for network.";
+    logger.error(error);
+    throw error;
   }
 
   if(isEmpty(privateKey)){
-    logger.error("Please 'export PRIVATEKEY=XXXX' before running.");
-    return [];
+    let error = "Please 'export PRIVATEKEY=XXXX' before running.";
+    logger.error(error);
+    throw error;
   }
   
   let fabric = new Fabric;
@@ -59,19 +59,23 @@ const findSites = async (network) =>{
     let newSites = [];
     await Promise.all(
       sitesIds.map(async siteId => {
-          // console.log("Loading site: " + siteId);
+          console.log("Loading site: " + siteId);
           let newSite = new Site({fabric, siteId});
           await newSite.loadSite();
-          // console.log("Site loaded: " + JQ(newSite.siteInfo));
-          newSites.push(newSite.siteInfo);
+          newSites.push(newSite);
+          siteStore[siteId] = newSite;
       })
     );
     date = moment().format('MM/DD/YYYY h:mm:ss a');
     return newSites;
   }catch(e){
-    // console.error(e);
+    //console.error(e);
     return [];
   }
+}
+
+const getTitle = ({siteId,id}) =>{
+  return siteStore[siteId].titleStore[id];
 }
 
 const redeemCode = async (network,code) => {
@@ -152,7 +156,7 @@ const redeemCode = async (network,code) => {
     await fabric.initFromEncrypted({configUrl, encryptedPrivateKey, password: code});
     let newSite = new Site({fabric, siteId});
     await newSite.loadSite();
-    return newSite.siteInfo;
+    return newSite;
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error("Error redeeming code:");
@@ -218,50 +222,41 @@ const main = async () => {
 
       let site = null;
       
-      try{
-        site = redeemSites[network][code];
-      }catch(e){}
-
+      site = await redeemCode(Config.networks[network],code);
+      site.network = network;
       if(!site){
-        site = await redeemCode(Config.networks[network],code);
-        site.network = network;
-        if(!site){
-          throw "Could not get Site from code: " + code;
-        }
-        if(!redeemSites[network]){
-          redeemSites[network] = {};
-        }
-        redeemSites[network][code] = site;
+        throw "Could not get Site from code: " + code;
       }
 
-      let titles = site.titles || [];
-      let playlists = site.playlists || [];
-      let synopsis = site.info ? site.info.synopsis : "";
+      let titles = site.siteInfo.titles || [];
+      let playlists = site.siteInfo.playlists || [];
+      let synopsis = site.siteInfo.info ? site.siteInfo.info.synopsis : "";
       let titleColor = "rgb(236,245,255)";
 
       let site_info = {
-        display_title: site.display_title,
-        title_logo: site.title_logo,
-        landscape_logo: site.landscape_logo,
+        display_title: site.siteInfo.display_title,
+        title_logo: site.siteInfo.title_logo,
+        landscape_logo: site.siteInfo.landscape_logo,
         info: {
           synopsis: synopsis
         }
       }
 
       const params = {
-        title_logo: site.title_logo,
+        title_logo: site.siteInfo.title_logo,
         title_color: titleColor,
-        display_title: site.display_title,
+        display_title: site.siteInfo.display_title,
         playlists: playlists,
         titles: titles,
         eluvio_logo: serverHost + "/logo.png",
         site_index: code,
+        site_id: site.siteId,
         site_info: JSON.stringify(site_info),
         date,
         network
       };
 
-      res.set('Cache-Control', 'no-cache');
+      res.set('Cache-Control', 'max-age=300');
       res.render(view, params);
     }catch(e){
       console.error(e);
@@ -274,16 +269,17 @@ const main = async () => {
   //Serve the site tvml template
   app.get(['/site.hbs/:network/:index','/watch.hbs/:network/:index'], async function(req, res) {
     try {
+      console.log("TEST1 ");
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
       let index = req.params.index;
       let network = req.params.network;
-      console.log("Route "+ view + "/" + network + "/" + view);
+      console.log("Route "+ view + "/" + network + "/" + index);
       let sites = networkSites[network];
       let site = sites[index];
-      let titles = site.titles || [];
-      let playlists = site.playlists || [];
+      let titles = site.siteInfo.titles || [];
+      let playlists = site.siteInfo.playlists || [];
       let titleColor = "rgb(236,245,255)";
-      // console.log("Site titles: " + JQ(site.titles));
+      console.log("Site : " + JQ(playlists));
       const params = {
         title_logo: site.title_logo,
         title_color: titleColor,
@@ -292,6 +288,7 @@ const main = async () => {
         titles: titles,
         eluvio_logo: serverHost + "/logo.png",
         site_index: index,
+        site_id: site.siteId,
         network,
         date
       };
@@ -306,13 +303,14 @@ const main = async () => {
   });
 
   //Serve the title details from versionHash tvml template
-  app.get('/detailhash.hbs/:id', async function(req, res) {
+  app.get('/detailhash.hbs/:siteId/:id', async function(req, res) {
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
+      let siteId = req.params.siteId;
       let id = req.params.id;
-      console.log("Route "+ view + "/" + id);
-      // console.log(Object.keys(AllTitles));
-      let title = AllTitles[id];
+      console.log("Route "+ view + "/" + siteId + "/" + id);
+
+      let title = getTitle({siteId,id});
 
       console.log("Found title: " + title.display_title);
 
@@ -356,7 +354,7 @@ const main = async () => {
       res.set('Cache-Control', 'no-cache');
       res.render(view, params);
     }catch(e){
-      logger.error(JQ(err));
+      logger.error(JQ(e));
       var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
       res.send(template, 404);
     }

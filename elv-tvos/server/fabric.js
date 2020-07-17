@@ -1,4 +1,5 @@
 const { ElvClient } = require('@eluvio/elv-client-js/src/ElvClient');
+const { JQ } = require('./utils');
 
 module.exports = class Fabric {
   async init({configUrl, privateKey}){
@@ -21,7 +22,6 @@ module.exports = class Fabric {
 
   async findSites() {
     let sites = [];
-
     const contentSpaceLibraryId =
       this.client.utils.AddressToLibraryId(
         this.client.utils.HashToAddress(

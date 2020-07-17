@@ -227,19 +227,7 @@ function replaceTemplate(text) {
     navigationDocument.pushDocument(document);
   }
 
-  /*
-  if (loadingDoc) {
-    try {
-      navigationDocument.removeDocument(loadingDoc);
-    } catch (e) {}
-  }
-  */
-
   return document;
-}
-
-function playPlaylistTitle(index) {
-  console.log('PLAY PLAYLIST ITEM: ' + index);
 }
 
 function playMedia(mediaURL, mediaType) {
@@ -258,12 +246,12 @@ function playMedia(mediaURL, mediaType) {
   myPlayer.play();
 }
 
-async function loadTitle(id) {
+async function loadTitle(siteId, id) {
   //XXX: siteIndex is not passed for some reason
-  console.log('LOAD TITLE:' + id);
+  console.log('LOAD TITLE:' + siteId + "," + id);
   try {
     loadingTemplate();
-    const documentURL = baseURL + 'detailhash.hbs/' + id;
+    const documentURL = baseURL + 'detailhash.hbs/' +siteId + "/" + id;
     let text = await fetch(documentURL, 'text');
     var template = Handlebars.compile(text);
     var params = `&session_id=${sessionTag}&app_id=${Device.appIdentifier}&app_version=${Device.appVersion}&system_version=${Device.systemVersion}&system_lang=${Settings.language}`;
