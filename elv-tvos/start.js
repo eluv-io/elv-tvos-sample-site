@@ -281,7 +281,7 @@ const main = async () => {
       let titleColor = "rgb(236,245,255)";
       console.log("Site : " + JQ(playlists));
       const params = {
-        title_logo: site.title_logo,
+        title_logo: site.siteInfo.title_logo,
         title_color: titleColor,
         display_title: site.display_title,
         playlists: playlists,
