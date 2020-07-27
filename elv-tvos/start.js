@@ -57,16 +57,18 @@ const findSites = async (network) =>{
     await fabric.init({configUrl,privateKey});
     var sitesIds = await fabric.findSites();
     let newSites = [];
+    let newSiteStore = {};
     await Promise.all(
       sitesIds.map(async siteId => {
           //console.log("Loading site: " + siteId);
           let newSite = new Site({fabric, siteId});
           await newSite.loadSite();
           newSites.push(newSite);
-          siteStore[siteId] = newSite;
+          newSiteStore[siteId] = newSite;
       })
     );
     date = moment().format('MM/DD/YYYY h:mm:ss a');
+    siteStore = newSiteStore;
     return newSites;
   }catch(e){
     //console.error(e);
