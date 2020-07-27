@@ -52,19 +52,27 @@ class Site {
         linkPath: "public/asset_metadata"
       });
 
+      //Top left logo
       this.siteInfo.title_logo = this.createLink(
         this.siteInfo.baseLinkUrl,
         "images/title_logo/thumbnail"
       );
-
       this.siteInfo.title_logo = this.replaceTemplate(this.siteInfo.title_logo)
 
+      //Site selection Screen
       this.siteInfo.landscape_logo = this.createLink(
         this.siteInfo.baseLinkUrl,
         "images/landscape/default"
       );
-
       this.siteInfo.landscape_logo = this.replaceTemplate(this.siteInfo.landscape_logo)
+
+      //Background image
+      this.siteInfo.main_background = this.createLink(
+        this.siteInfo.baseLinkUrl,
+        "images/main_background/default"
+      );
+
+      this.siteInfo.main_background = this.replaceTemplate(this.siteInfo.main_background)
       
       this.siteInfo.playlists = await this.loadPlaylists(versionHash, this.siteInfo.playlists);
       this.siteInfo.series = await this.loadTitles(versionHash, "series", this.siteInfo.series);

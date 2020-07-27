@@ -59,7 +59,7 @@ const findSites = async (network) =>{
     let newSites = [];
     await Promise.all(
       sitesIds.map(async siteId => {
-          console.log("Loading site: " + siteId);
+          //console.log("Loading site: " + siteId);
           let newSite = new Site({fabric, siteId});
           await newSite.loadSite();
           newSites.push(newSite);
@@ -244,6 +244,7 @@ const main = async () => {
 
       const params = {
         title_logo: site.siteInfo.title_logo,
+        main_background: site.siteInfo.main_background,
         title_color: titleColor,
         display_title: site.siteInfo.display_title,
         playlists: playlists,
@@ -269,7 +270,6 @@ const main = async () => {
   //Serve the site tvml template
   app.get(['/site.hbs/:network/:index','/watch.hbs/:network/:index'], async function(req, res) {
     try {
-      console.log("TEST1 ");
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
       let index = req.params.index;
       let network = req.params.network;
@@ -279,9 +279,9 @@ const main = async () => {
       let titles = site.siteInfo.titles || [];
       let playlists = site.siteInfo.playlists || [];
       let titleColor = "rgb(236,245,255)";
-      console.log("Site : " + JQ(playlists));
       const params = {
         title_logo: site.siteInfo.title_logo,
+        main_background: site.siteInfo.main_background,
         title_color: titleColor,
         display_title: site.display_title,
         playlists: playlists,
@@ -311,8 +311,6 @@ const main = async () => {
       console.log("Route "+ view + "/" + siteId + "/" + id);
 
       let title = getTitle({siteId,id});
-
-      console.log("Found title: " + title.display_title);
 
       let director = "";
       let genre = "";
