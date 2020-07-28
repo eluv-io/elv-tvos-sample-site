@@ -97,7 +97,6 @@ class Site {
       Object.keys(playlistInfo).map(async playlistSlug => {
         try {
           const {name, order, list} = playlistInfo[playlistSlug];
-          // console.log("Playlist: " + name);
           let titles = [];
           await Promise.all(
             Object.keys(list || {}).map(async titleSlug => {
@@ -186,7 +185,7 @@ class Site {
           }
 
           title.getVideoUrl = async(offeringKey) => {
-            console.log("Getting getVideoUrl for " + title.displayTitle + " offering: " + offeringKey);
+            // console.log("Getting getVideoUrl for " + title.displayTitle + " offering: " + offeringKey);
             if(!title.availableOfferings){
               await title.getAvailableOfferings();
             }

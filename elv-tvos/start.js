@@ -57,27 +57,25 @@ const findSites = async (network) =>{
     await fabric.init({configUrl,privateKey});
     var sitesIds = await fabric.findSites();
     let newSites = [];
-    let newSiteStore = {};
     await Promise.all(
       sitesIds.map(async siteId => {
-          //console.log("Loading site: " + siteId);
           let newSite = new Site({fabric, siteId});
           await newSite.loadSite();
           newSites.push(newSite);
-          newSiteStore[siteId] = newSite;
+          siteStore[siteId] = newSite;
       })
     );
     date = moment().format('MM/DD/YYYY h:mm:ss a');
-    siteStore = newSiteStore;
     return newSites;
   }catch(e){
-    //console.error(e);
+    console.error(e);
     return [];
   }
 }
 
 const getTitle = ({siteId,id}) =>{
-  return siteStore[siteId].titleStore[id];
+  let site = siteStore[siteId];
+  return site.titleStore[id];
 }
 
 const redeemCode = async (network,code) => {
@@ -313,8 +311,6 @@ const main = async () => {
       console.log("Route "+ view + "/" + siteId + "/" + id);
 
       let title = getTitle({siteId,id});
-      console.log("Title: " + JQ(title.displayTitle));
-
       let site = siteStore[siteId];
 
       let director = "";
@@ -363,7 +359,7 @@ const main = async () => {
       res.set('Cache-Control', 'no-cache');
       res.render(view, params);
     }catch(e){
-      logger.error(JQ(e));
+      logger.error(e);
       var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
       res.send(template, 404);
     }
@@ -466,7 +462,6 @@ const main = async () => {
         let info = {
           videoUrl: await title.getVideoUrl(offeringId)
         };
-        console.log("videoUrl: " + JQ(info));
         res.send(info);
       }catch(err){
         logger.error("Could not get title url: " +err);
