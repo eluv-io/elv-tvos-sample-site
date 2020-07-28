@@ -305,7 +305,7 @@ const main = async () => {
   });
 
   //Serve the title details from versionHash tvml template
-  app.get('/detailhash.hbs/:siteId/:id', async function(req, res) {
+  app.get('/details.hbs/:siteId/:id', async function(req, res) {
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
       let siteId = req.params.siteId;
@@ -313,6 +313,9 @@ const main = async () => {
       console.log("Route "+ view + "/" + siteId + "/" + id);
 
       let title = getTitle({siteId,id});
+      console.log("Title: " + JQ(title.displayTitle));
+
+      let site = siteStore[siteId];
 
       let director = "";
       let genre = "";
@@ -325,7 +328,9 @@ const main = async () => {
           await title.getAvailableOfferings();
         }
         offerings = title.availableOfferings || {};
-      }catch(e){}
+      }catch(e){
+        console.error(e);
+      }
       try {
         director = title.info.talent.director[0].talent_full_name;
       }catch(e){}
@@ -339,17 +344,21 @@ const main = async () => {
         cast = title.info.talent.cast || [];
       }catch(e){}
 
-      //TODO:
-      length = "";
+      let numOfferings = Object.keys(offerings).length;
 
       const params = {
+        siteId,
+        titleId:id,
         director,
         genre,
         date,
         cast,
         title,
         offerings,
-        date
+        numOfferings,
+        date,
+        main_background: site.siteInfo.main_background,
+        play_icon: serverHost + "/play.png"
       };
       res.set('Cache-Control', 'no-cache');
       res.render(view, params);
@@ -443,6 +452,27 @@ const main = async () => {
       res.send(err, 404);
     }
   });
+
+    //Serve playoutUrl
+    app.get('/title/videoUrl/:siteId/:id/:offeringId', async function(req, res) {
+      try{
+        let siteId = req.params.siteId;
+        let id = req.params.id;
+        let offeringId = req.params.offeringId;
+        let title = getTitle({siteId,id});
+        if(!title){
+          throw "title does not exist: " + id;
+        }
+        let info = {
+          videoUrl: await title.getVideoUrl(offeringId)
+        };
+        console.log("videoUrl: " + JQ(info));
+        res.send(info);
+      }catch(err){
+        logger.error("Could not get title url: " +err);
+        res.send(err, 404);
+      }
+    });
 
   const appFunc = async function(req, res) {
     try{

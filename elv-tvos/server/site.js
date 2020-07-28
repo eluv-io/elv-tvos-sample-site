@@ -180,8 +180,25 @@ class Site {
 
           //For lazy loading the offerings
           title.getAvailableOfferings = async () =>{
+            console.log("Getting available offerings for " + title.displayTitle);
             title.availableOfferings = await this.getAvailableOfferings(title);
-            //console.log("AvailableOfferings: " + JQ(title.availableOfferings));
+            console.log("AvailableOfferings: " + JQ(title.availableOfferings));
+          }
+
+          title.getVideoUrl = async(offeringKey) => {
+            console.log("Getting getVideoUrl for " + title.displayTitle + " offering: " + offeringKey);
+            if(!title.availableOfferings){
+              await title.getAvailableOfferings();
+            }
+
+            let offering = title.availableOfferings[offeringKey];
+            let videoUrl = offering.videoUrl;
+            if(!videoUrl){
+              videoUrl = await offering.getVideoUrl(offeringKey);
+            }
+
+            console.log("Found video url " + videoUrl);
+            return videoUrl;
           }
 
           Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
@@ -211,25 +228,31 @@ class Site {
       }
       
       for (const key in availableOfferings) {
-        let offering = availableOfferings[key];
-        
-        let playoutOptions = await this.client.PlayoutOptions({
-          libraryId: this.siteLibraryId,
-          objectId: this.siteId,
-          linkPath: title.playoutOptionsLinkPath,
-          protocols: ["hls", "dash"],
-          drms: ["sample-aes", "clear"],
-          offering: key
-        });
-        let playoutUrl = (playoutOptions.hls.playoutMethods.clear || playoutOptions.hls.playoutMethods["sample-aes"]).playoutUrl;
-        offering.videoUrl = this.replaceTemplate(playoutUrl,true);
-
-        if(offering.display_name == "default"){
-          offering.display_name = "Watch";
-        }
         if(allowedOfferings.length > 0 && !allowedOfferings.includes(key)){
           continue;
         }
+
+        let offering = availableOfferings[key];
+        offering.key = key;
+
+        offering.getVideoUrl = async (key)=>{
+          let playoutOptions = await this.client.PlayoutOptions({
+            libraryId: this.siteLibraryId,
+            objectId: this.siteId,
+            linkPath: title.playoutOptionsLinkPath,
+            protocols: ["hls", "dash"],
+            drms: ["sample-aes", "clear"],
+            offering: key
+          });
+          let playoutUrl = (playoutOptions.hls.playoutMethods.clear || playoutOptions.hls.playoutMethods["sample-aes"]).playoutUrl;
+          offering.videoUrl = this.replaceTemplate(playoutUrl,true);
+          return offering.videoUrl;
+        }
+        
+        if(offering.display_name == "default"){
+          offering.display_name = "Watch";
+        }
+
         newAvailableOfferings[key] = offering;
       }
       

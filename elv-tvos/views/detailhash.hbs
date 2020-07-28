@@ -28,14 +28,19 @@
                <text>{{date}}</text>
             </row>
             <description handlesOverflow ="true">{{title.info.synopsis}}</description>
-            <row>
-              {{#each offerings}}
-                <buttonLockup onselect="playMedia('{{videoUrl}}','video')">
-                    <badge src="resource://button-preview" />
-                    <title>{{display_name}}</title>
-                </buttonLockup>
-               {{/each}}
-            </row>
+            <shelf>
+               <section>
+                <header>
+                    <title>All Titles</title>
+                </header>
+               {{#each offerings}}
+                  <buttonLockup onselect="playOffering('{{key}}')">
+                     <badge src="resource://button-preview" />
+                     <title>{{display_name}}</title>
+                  </buttonLockup>
+                  {{/each}}
+               </section>
+            </shelf>
          </stack>
          <heroImg src="{{title.posterUrl}}" />
       </banner>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<document>
+   <productBundleTemplate>
+      <background>
+      </background>
+      <banner>
+         <stack>
+            <title>{{title.display_title}}</title>
+            <row>
+               <text>{{length}}</text>
+               <text>{{genre}}</text>
+               <text>{{date}}</text>
+            </row>
+            <description handlesOverflow ="true">{{title.info.synopsis}}</description>
+            <row>
+               <buttonLockup onselect="playOffering('{{@root.siteId}}','{{@root.titleId}}','default')">
+                  <badge src="resource://button-preview" />
+                  <title>Watch</title>
+               </buttonLockup>
+            </row>
+         </stack>
+         <heroImg src="{{title.posterUrl}}" />
+      </banner>
+      {{#greaterThan numOfferings 1}}
+      <shelf>
+            <header>
+               <title>Available Offerings</title>
+            </header>
+            <section>
+            {{#each offerings}}
+               {{#ifnoteq display_name "Watch"}}
+               <lockup onselect="playOffering('{{@root.siteId}}','{{@root.titleId}}','{{key}}')">
+                  <img src="{{@root.play_icon}}" width="120" height="80"/>
+                  <title>{{display_name}}</title>
+               </lockup>
+               {{/ifnoteq}}
+            {{/each}}
+         </section>
+      </shelf>
+      {{/greaterThan}}
+      <productInfo>
+      <infoTable>
+            <info>
+               <header>
+                  <title>Director</title>
+               </header>
+               <text>{{director}}</text>
+            </info>
+            <info>
+               <header>
+                  <title>Actors</title>
+               </header>
+               {{#each cast}}
+                <text>{{talent_full_name}}</text>
+               {{/each}}
+            </info>
+         </infoTable>
+      </productInfo>
+  </productBundleTemplate>
+</document>

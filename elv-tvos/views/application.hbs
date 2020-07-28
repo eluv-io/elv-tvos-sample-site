@@ -117,10 +117,14 @@ async function documentOnSelect(event) {
   }
 }
 
+function getQueryParams(){
+  return `&session_id=${sessionTag}&app_id=${Device.appIdentifier}&app_version=${Device.appVersion}&system_version=${Device.systemVersion}&system_lang=${Settings.language}`;
+}
+
 function resolveTemplate(text) {
   // compile the template
   var template = Handlebars.compile(text);
-  var queryParams = `&session_id=${sessionTag}&app_id=${Device.appIdentifier}&app_version=${Device.appVersion}&system_version=${Device.systemVersion}&system_lang=${Settings.language}`;
+  var queryParams = getQueryParams();
   var resolved = template({
     host: currentHost,
     params: queryParams,
@@ -246,12 +250,34 @@ function playMedia(mediaURL, mediaType) {
   myPlayer.play();
 }
 
+async function playOffering(siteId, titleId, offeringKey){
+  try{
+    loadingTemplate();
+    console.log('playOffering site: '+ siteId+ " title: " + titleId +" offering: " + offeringKey);
+    let url = baseURL + "title/videoUrl/" + siteId + "/" + titleId + "/"+ offeringKey;
+    let json = await getJSON(url);
+    let videoUrl = json.videoUrl.replace('\{\{\{host\}\}\}',currentHost);
+    console.log("videoUrl host replace: " + videoUrl);
+    videoUrl = videoUrl.replace('\{\{params\}\}',getQueryParams());
+    console.log("videoUrl params replace: " + videoUrl);
+    playMedia(videoUrl,'video');
+    dismissModal();
+  } catch (e) {
+    let alert = createAlert(
+      'Video Error',
+      'There was an error requesting the video.'
+    );
+    dismissModal();
+    navigationDocument.presentModal(alert);
+  }
+}
+
 async function loadTitle(siteId, id) {
   //XXX: siteIndex is not passed for some reason
   console.log('LOAD TITLE:' + siteId + "," + id);
   try {
     loadingTemplate();
-    const documentURL = baseURL + 'detailhash.hbs/' +siteId + "/" + id;
+    const documentURL = baseURL + 'details.hbs/' +siteId + "/" + id;
     let text = await fetch(documentURL, 'text');
     var template = Handlebars.compile(text);
     var params = `&session_id=${sessionTag}&app_id=${Device.appIdentifier}&app_version=${Device.appVersion}&system_version=${Device.systemVersion}&system_lang=${Settings.language}`;
