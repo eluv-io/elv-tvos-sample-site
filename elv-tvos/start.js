@@ -342,6 +342,8 @@ const main = async () => {
 
       let numOfferings = Object.keys(offerings).length;
 
+      let posterUrl = title.posterUrl;
+
       const params = {
         siteId,
         titleId:id,
@@ -352,6 +354,7 @@ const main = async () => {
         title,
         offerings,
         numOfferings,
+        posterUrl,
         date,
         main_background: site.siteInfo.main_background,
         play_icon: serverHost + "/play.png"

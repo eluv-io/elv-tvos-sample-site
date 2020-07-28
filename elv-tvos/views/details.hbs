@@ -30,7 +30,7 @@
             {{#each offerings}}
                {{#ifnoteq display_name "Watch"}}
                <lockup onselect="playOffering('{{@root.siteId}}','{{@root.titleId}}','{{key}}')">
-                  <img src="{{@root.play_icon}}" width="120" height="80"/>
+                  <img src="{{@root.posterUrl}}" width="200" height="120" />
                   <title>{{display_name}}</title>
                </lockup>
                {{/ifnoteq}}

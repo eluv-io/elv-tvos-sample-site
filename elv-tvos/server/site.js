@@ -179,9 +179,7 @@ class Site {
 
           //For lazy loading the offerings
           title.getAvailableOfferings = async () =>{
-            console.log("Getting available offerings for " + title.displayTitle);
             title.availableOfferings = await this.getAvailableOfferings(title);
-            console.log("AvailableOfferings: " + JQ(title.availableOfferings));
           }
 
           title.getVideoUrl = async(offeringKey) => {
