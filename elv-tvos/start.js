@@ -464,6 +464,7 @@ const main = async () => {
         if(!title){
           throw "title does not exist: " + id;
         }
+        console.log("title video found: " + JQ(title));
         let info = {
           videoUrl: await title.getVideoUrl(offeringId)
         };

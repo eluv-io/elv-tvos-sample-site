@@ -120,7 +120,23 @@ class Site {
                   title.availableOfferings = await this.getAvailableOfferings(title);
                   //console.log("AvailableOfferings: " + JQ(title.availableOfferings));
                 }
-                
+
+                title.getVideoUrl = async (offeringKey) => {
+                  console.log("Getting getVideoUrl for " + title.displayTitle + " offering: " + offeringKey);
+                  if(!title.availableOfferings){
+                    await title.getAvailableOfferings();
+                  }
+      
+                  let offering = title.availableOfferings[offeringKey];
+                  let videoUrl = offering.videoUrl;
+                  if(!videoUrl){
+                    videoUrl = await offering.getVideoUrl(offeringKey);
+                  }
+      
+                  console.log("Found video url " + videoUrl);
+                  return videoUrl;
+                }
+      
                 Object.assign(title, await this.imageLinks({baseLinkUrl: title.baseLinkUrl, versionHash: title.versionHash, images: title.images}));
 
                 titles[parseInt(title.order)] = title;
@@ -164,6 +180,7 @@ class Site {
           let title = titleInfo[index][titleKey];
 
           if(title["."].resolution_error) {
+            console.log("Resolution error ");
             return;
           }
 
@@ -182,8 +199,7 @@ class Site {
             title.availableOfferings = await this.getAvailableOfferings(title);
           }
 
-          title.getVideoUrl = async(offeringKey) => {
-            // console.log("Getting getVideoUrl for " + title.displayTitle + " offering: " + offeringKey);
+          title.getVideoUrl = async (offeringKey) => {
             if(!title.availableOfferings){
               await title.getAvailableOfferings();
             }
@@ -193,8 +209,6 @@ class Site {
             if(!videoUrl){
               videoUrl = await offering.getVideoUrl(offeringKey);
             }
-
-            console.log("Found video url " + videoUrl);
             return videoUrl;
           }
 
