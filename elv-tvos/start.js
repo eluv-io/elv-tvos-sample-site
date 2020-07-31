@@ -156,6 +156,7 @@ const redeemCode = async (network,code) => {
     await fabric.initFromEncrypted({configUrl, encryptedPrivateKey, password: code});
     let newSite = new Site({fabric, siteId});
     await newSite.loadSite();
+    siteStore[siteId] = newSite;
     return newSite;
   } catch (error) {
     // eslint-disable-next-line no-console
@@ -311,6 +312,7 @@ const main = async () => {
       console.log("Route "+ view + "/" + siteId + "/" + id);
 
       let title = getTitle({siteId,id});
+      console.log("Title found: " + title.display_title);
       let site = siteStore[siteId];
 
       let director = "";
