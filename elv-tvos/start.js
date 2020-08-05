@@ -209,6 +209,14 @@ const main = async () => {
       res.render("index", params);
   });
 
+  app.get('/redeem.hbs', async function(req, res) {
+    const params = {
+      eluvio_background: serverHost + "/eluvio_background_darker.png"
+    };
+    res.set('Cache-Control', 'no-cache');
+    res.render("redeem", params);
+  });
+
   //Serve the site tvml template
   app.get(['/redeemsite.hbs/:network/:code', '/redeemwatch.hbs/:network/:code'], async function(req, res) {
     try {
