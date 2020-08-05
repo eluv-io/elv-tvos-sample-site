@@ -133,7 +133,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, TVApplicationControllerDe
         let title = "Error Launching Application"
         let message = error.localizedDescription
         let alertController = UIAlertController(title: title, message: message, preferredStyle: .alert )
-        
+        let OKAction = UIAlertAction(title: "OK", style: .default) { (action:UIAlertAction!) in
+            self.appController?.navigationController.dismiss(animated: true, completion: nil)
+            exit(0);
+        }
+        alertController.addAction(OKAction)
         self.appController?.navigationController.present(alertController, animated: true, completion: {
             // ...
         })
