@@ -313,7 +313,7 @@ async function loadRedeemIndex() {
     let document = pushTemplate(resolvedText);
     document.addEventListener('select', async (event) => {
       try {
-        if(event.target.id === 'redeemSubmit'){
+        if(event.target.getAttribute("id") == 'redeemSubmit'){
           const textField = document.getElementById('redeemField');
           const value = textField.getFeature('Keyboard').text;
           console.log('Redeem Selected! ' + value);
