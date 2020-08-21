@@ -1,47 +1,22 @@
-<?xml version="1.0" encoding="UTF-8" ?>
 <document>
-    <listTemplate>
+    <formTemplate>
         <background>
-            <img src="{{eluvio_background}}"/>
-        </background>
-      <list>
-         <section>
-            <listItemLockup onselect="loadRedeemForm()">
-                <decorationImage src="resource://button-more" />
-                <title>Redeem Site Code</title>
-                <relatedContent>
-                    <lockup>
-                        <img src="" height="1000" />
-                        <title>Redeem Site Code</title>
-                        <description>If you have an access code, enter it here to load the Site.</description>
-                    </lockup>
-                </relatedContent>
-            </listItemLockup>
-
-            <listItemLockup onselect="loadView('networks.hbs')">
-                <decorationImage src="resource://button-more" />
-                <title>Choose Network ({{network}})</title>
-                <relatedContent>
-                    <lockup>
-                        <img src="" height="1000"/>
-                        <title>Choose Network</title>
-                        <description>Use this option to switch Fabric networks.</description>
-                    </lockup>
-                </relatedContent>
-            </listItemLockup>
-
-            <listItemLockup onselect="loadView('sites.hbs')">
-                <decorationImage src="resource://button-preview" />
-                <title>Available Sites</title>
-                <relatedContent>
-                    <lockup>
-                        <img src="" height="1000" />
-                        <title>Available Sites</title>
-                        <description>Use this option to view sites you have access to.</description>
-                    </lockup>
-                </relatedContent>
-            </listItemLockup>
-         </section>
-      </list>
-    </listTemplate>
+          <img src="{{eluvio_background}}"/>
+      </background>
+        <banner>
+            <title >Welcome!</title>
+            <title>Enter code for access</title>
+        </banner>
+        <textField id="redeemField"></textField>
+        <footer>
+            <row style="tv-align:center; tv-interitem-spacing:300">
+                <button id="redeemSubmit" style="tv-align:center">
+                    <text>Submit</text>
+                </button>            
+                <button id="network" onselect="loadNetworksForm()" style="margin:200;tv-align:right;width:150">
+                    <badge src="resource://button-more"/>
+                </button>
+            </row>
+        </footer>
+    </formTemplate>
 </document>

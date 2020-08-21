@@ -11,7 +11,12 @@
          <section>
             {{#each networks}}
               <listItemLockup onselect="loadNetwork('{{this}}')">
+                {{#ifeq this @root/network}}
+                  <decorationImage src="resource://button-checkmark" />
+                {{/ifeq}}
+                {{#ifnoteq this @root/network}}
                   <decorationImage src="resource://button-more" />
+                {{/ifnoteq}}
                   <title>{{this}}</title>
               </listItemLockup>
             {{/each}}

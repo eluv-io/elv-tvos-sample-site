@@ -303,23 +303,22 @@ function getHero() {
   return baseURL + 'logo.jpg';
 }
 
-async function loadRedeemForm() {
-  console.log('LOAD REDEEM FORM');
-  const documentURL = baseURL + 'redeem.hbs';
+async function loadRedeemIndex() {
+  const documentURL = baseURL + 'index.hbs/' + network;
   try {
-    loadingTemplate();
     let docText = await fetch(documentURL, 'text');
     console.log('Site text loaded: ' + docText);
     let resolvedText = resolveTemplate(docText);
     console.log('\n\nResolvedText: ' + docText);
     let document = pushTemplate(resolvedText);
-    dismissModal();
     document.addEventListener('select', async (event) => {
       try {
-        const textField = document.getElementById('redeemField');
-        const value = textField.getFeature('Keyboard').text;
-        console.log('Redeem Selected! ' + value);
-        loadRedeemSite(value);
+        if(event.target.id === 'redeemSubmit'){
+          const textField = document.getElementById('redeemField');
+          const value = textField.getFeature('Keyboard').text;
+          console.log('Redeem Selected! ' + value);
+          loadRedeemSite(value);
+        }
       } catch (e) {
         var alert = createAlert(
           'Server Error',
@@ -334,7 +333,6 @@ async function loadRedeemForm() {
       'Server Error',
       'There was an error loading the page.'
     );
-    dismissModal();
     navigationDocument.presentModal(alert);
   }
 }
@@ -343,7 +341,7 @@ async function loadNetworksForm() {
   console.log('LOAD NETWORKS FORM');
   try {
     loadingTemplate();
-    const documentURL = baseURL + 'networks.hbs';
+    const documentURL = baseURL + 'networks.hbs/'+network;
     let docText = await fetch(documentURL, 'text');
     console.log('Site text loaded: ' + docText);
     let resolvedText = resolveTemplate(docText);
@@ -502,7 +500,7 @@ App.onLaunch = function (options) {
 
   evaluateScripts(javascriptFiles, function (success) {
     if (success) {
-      loadView('index.hbs', false);
+      loadRedeemIndex();
       getJSON(configUrl).then(
         function (data) {
           try {

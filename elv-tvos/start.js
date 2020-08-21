@@ -232,10 +232,10 @@ const main = async () => {
       let site = null;
       
       site = await redeemCode(Config.networks[network],code);
-      site.network = network;
       if(!site){
         throw "Could not get Site from code: " + code;
       }
+      site.network = network;
 
       let titles = site.siteInfo.titles || [];
       let playlists = site.siteInfo.playlists || [];
@@ -382,10 +382,14 @@ const main = async () => {
   app.get('/networks.hbs/:network', async function(req, res) {
     try {
       let networks = Object.keys(Config.networks);
+      let network = req.params.network;
+      console.log("Route /networks.hbs/" + network);
+
       const params = {
         eluvio_logo: serverHost + "/logo.png",
         eluvio_background: serverHost + "/eluvio_background.png",
-        networks
+        networks,
+        network
       };
 
       res.set('Cache-Control', 'no-cache');
