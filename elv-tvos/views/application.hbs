@@ -38,13 +38,14 @@ var createAlert = function (title, description) {
     <alertTemplate>
       <title>${title}</title>
       <description>${description}</description>
-      <button onselect="dismissModal()">
+      <button onselect="goBack()">
         <text>OK</text>
       </button>
     </alertTemplate>
   </document>`;
   var parser = new DOMParser();
   var alertDoc = parser.parseFromString(alertString, 'application/xml');
+  navigationDocument.pushDocument(alertDoc);
   return alertDoc;
 };
 
@@ -109,11 +110,10 @@ async function documentOnSelect(event) {
     feature.setDocument(featureDoc, target);
     console.log('Document set for menuItem.');
   } catch (e) {
-    var alert = createAlert(
+    createAlert(
       'Page Load Error',
       'There was an error attempting to load the homepage.\n\n Please check your network connection and try again later.'
     );
-    navigationDocument.presentModal(alert);
   }
 }
 
@@ -181,11 +181,10 @@ function pushTemplate(text) {
       feature.setDocument(featureDoc, target);
       console.log('Document set for menuItem.');
     } catch (e) {
-      let alert = createAlert(
+      createAlert(
         'Page Load Error',
         'There was an error attempting to load the homepage.\n\n Please check your network connection and try again later.'
       );
-      navigationDocument.presentModal(alert);
     }
   });
   navigationDocument.pushDocument(document);
@@ -215,11 +214,10 @@ function replaceTemplate(text) {
       feature.setDocument(featureDoc, target);
       console.log('Document set for menuItem.');
     } catch (e) {
-      let alert = createAlert(
+      createAlert(
         'Page Load Error',
         'There was an error attempting to load the homepage.\n\n Please check your network connection and try again later.'
       );
-      navigationDocument.presentModal(alert);
     }
   });
   var currentDoc = getActiveDocument();
@@ -263,12 +261,11 @@ async function playOffering(siteId, titleId, offeringKey){
     playMedia(videoUrl,'video');
     dismissModal();
   } catch (e) {
-    let alert = createAlert(
+    dismissModal();
+    createAlert(
       'Video Error',
       'There was an error requesting the video.'
     );
-    dismissModal();
-    navigationDocument.presentModal(alert);
   }
 }
 
@@ -290,12 +287,11 @@ async function loadTitle(siteId, id) {
     dismissModal();
   } catch (e) {
     console.error(e);
-    var alert = createAlert(
+    dismissModal();
+    createAlert(
       'Server Error',
       'There was an error loading the title.'
     );
-    dismissModal();
-    navigationDocument.presentModal(alert);
   }
 }
 
@@ -320,20 +316,18 @@ async function loadRedeemIndex() {
           loadRedeemSite(value);
         }
       } catch (e) {
-        var alert = createAlert(
+        createAlert(
           'Server Error',
           'There was an error loading the site.'
         );
-        navigationDocument.presentModal(alert);
       }
     });
   } catch (e) {
     console.error(e);
-    var alert = createAlert(
+    createAlert(
       'Server Error',
       'There was an error loading the page.'
     );
-    navigationDocument.presentModal(alert);
   }
 }
 
@@ -350,12 +344,11 @@ async function loadNetworksForm() {
     dismissModal();
   } catch (e) {
     console.error(e);
-    var alert = createAlert(
+    dismissModal();
+    createAlert(
       'Server Error',
       'There was an error loading the page.'
     );
-    dismissModal();
-    navigationDocument.presentModal(alert);
   }
 }
 
@@ -374,14 +367,13 @@ async function loadView(view, showLoading = true) {
     dismissModal();
   } catch (e) {
     console.error(e);
-    var alert = createAlert(
-      'Server Error',
-      'There was an error loading the page.'
-    );
     if (showLoading) {
       dismissModal();
     }
-    navigationDocument.presentModal(alert);
+    createAlert(
+      'Server Error',
+      'There was an error loading the page.'
+    );
   }
 }
 
@@ -417,12 +409,11 @@ async function loadRedeemSite(code) {
     }
   } catch (e) {
     console.error(e);
-    var alert = createAlert(
+    dismissModal();
+    createAlert(
       'Server Error',
       'There was an error loading the site.'
     );
-    dismissModal();
-    navigationDocument.presentModal(alert);
   }
 }
 
@@ -439,12 +430,11 @@ async function loadSite(index) {
     dismissModal();
   } catch (e) {
     console.error(e);
-    var alert = createAlert(
+    dismissModal();
+    createAlert(
       'Server Error',
       'There was an error loading the title.'
     );
-    dismissModal();
-    navigationDocument.presentModal(alert);
   }
 }
 
@@ -488,11 +478,10 @@ App.onLaunch = function (options) {
     console.log('Config: ' + JSON.stringify(config));
     configUrl = config.networks[network].configUrl;
   } catch (e) {
-    var alert = createAlert(
+    createAlert(
       'Server Error',
       'There was an error getting the configuration from the server. ' + e
     );
-    navigationDocument.presentModal(alert);
     return;
   }
 
@@ -510,28 +499,24 @@ App.onLaunch = function (options) {
             currentHost = nodes[0];
             baseURL = options.BASEURL;
           } catch (e) {
-            var alert = createAlert(
+            createAlert(
               'Server Error',
               'There was an error loading the site.'
             );
-            navigationDocument.presentModal(alert);
-            throw 'There was an error loading the site.';
           }
         },
         function (status) {
-          var alert = createAlert(
+          createAlert(
             'Server Error',
             'There was an error contacting the server.'
           );
-          navigationDocument.presentModal(alert);
         }
       );
     } else {
-      var alert = createAlert(
+      createAlert(
         'Evaluate Scripts Error',
         'There was an error attempting to evaluate the external JavaScript files.\n\n Please check your network connection and try again later.'
       );
-      navigationDocument.presentModal(alert);
     }
   });
 };

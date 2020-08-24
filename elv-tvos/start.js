@@ -171,7 +171,15 @@ const main = async () => {
   let serverHost = Config.serverHost;
   let serverPort = Config.serverPort || 4001;
   let updateInterval = Config.updateInterval || 60000;
+  let privateKey = process.env.PRIVATEKEY;
 
+  if(isEmpty(privateKey)){
+    let error = "Please 'export PRIVATEKEY=XXXX' before running.";
+    logger.error(error);
+    console.error(error);
+    process.exit(1);
+  }
+  
   app.engine('hbs', exbars({defaultLayout: false}));
   app.set('view engine', 'hbs');
   app.set('views', path.join(__dirname, '/views'));
@@ -224,7 +232,7 @@ const main = async () => {
       let code = req.params.code;
       let network = req.params.network;
 
-      console.log("Route "+ view + "/" + network + "/" + code);
+      // console.log("Route "+ view + "/" + network + "/" + code);
       if(!network){
         throw "No network for request";
       }
