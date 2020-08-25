@@ -490,16 +490,17 @@ const main = async () => {
   app.get('/info', async function(req, res) {
     const [value, release] = await requestsLock.acquire();
     try{
-      fs.readFile('./version.txt', 'utf8', function (err,info) {
+      fs.readFile('./package.json', 'utf8', function (err,info) {
         if (err) {
           logger.error(JQ(err));
           res.send(err, 404);
           return err;
         }
-        res.send(info);
+        let json = JSON.parse(info);
+        res.send(json.version);
       });
     }catch(err){
-      logger.error("Could not read version.txt "+err);
+      logger.error("Could not read package.json "+ err);
       res.send(err, 404);
     }finally {
       release();
