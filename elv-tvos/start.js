@@ -6,70 +6,63 @@ var {Site, AllTitles} = require('./server/site');
 var Config = require('./config.json');
 var path = require('path');
 var atob = require('atob');
-var {JQ,isEmpty,CreateID} = require('./server/utils')
+var {JQ,isEmpty,CreateID,RandomInt} = require('./server/utils')
 var fs = require('fs');
 var logger = require('./server/logger');
 var Sugar = require('sugar');
+var Mutex = require('async-mutex').Mutex;
+var Semaphore = require('async-mutex').Semaphore;
+
+const MAX_CACHED_ITEMS = 100;
+const MAX_REQUESTS = 500;
+
+const refreshSitesLock = new Mutex();
+const requestsLock = new Semaphore(MAX_REQUESTS);
+
 var app = express();
 
 var networkSites = {};
 var siteStore = {};
+var redeemCodes = {};
+var redeemMutexes = {};
 var date = "";
+
+const LimitObjectProperties = (obj, max) => {
+  if(!obj || max <= 0){
+    return obj;
+  }
+
+  let keys = Object.keys(obj);
+  let length = keys.length;
+  if(length > max){
+    let randKey = keys[RandomInt(max)];
+    delete obj[randKey];
+  }
+
+  return obj;
+}
 
 const Hash = (code) => {
   const chars = code.split("").map(code => code.charCodeAt(0));
   return chars.reduce((sum, char, i) => (chars[i + 1] ? (sum * 2) + char * chars[i+1] * (i + 1) : sum + char), 0).toString();
 };
 
-const refreshSites = async () =>{
-  for (const network in Config.networks) {
-    let value = Config.networks[network];
-    // console.log(`${network}: ${JQ(value)}`);
-    findSites(value).then(
-      (sites)=>{
-        networkSites[network] = sites;
-      },
-      (err)=>{
-        logger.error("Error finding sites for network " + network + ".\n" + err);
-      }
-    )
-  }
-
-}
-
-const findSites = async (network) =>{
-  let configUrl = network.configUrl;
-  let privateKey = process.env.PRIVATEKEY;
-  if(isEmpty(configUrl)){
-    let error = "configUrl not set for network.";
-    logger.error(error);
-    throw error;
-  }
-
-  if(isEmpty(privateKey)){
-    let error = "Please 'export PRIVATEKEY=XXXX' before running.";
-    logger.error(error);
-    throw error;
-  }
-  
-  let fabric = new Fabric;
+var num = 0;
+const refreshSites = async() =>{
+  await refreshSitesLock.acquire();
   try{
-    await fabric.init({configUrl,privateKey});
-    var sitesIds = await fabric.findSites();
-    let newSites = [];
-    await Promise.all(
-      sitesIds.map(async siteId => {
-          let newSite = new Site({fabric, siteId});
-          await newSite.loadSite();
-          newSites.push(newSite);
-          siteStore[siteId] = newSite;
-      })
-    );
-    date = moment().format('MM/DD/YYYY h:mm:ss a');
-    return newSites;
+    for (const code in redeemCodes) {
+      let {siteId,network} = redeemCodes[code];
+      if(!siteId){
+        continue;
+      }
+      redeemCode(network,code,true);
+    }
   }catch(e){
-    console.error(e);
-    return [];
+    logger.error("Could not refresh sites: "+e);
+  }finally{
+    refreshSitesLock.release();
+    num++;
   }
 }
 
@@ -78,12 +71,11 @@ const getTitle = ({siteId,id}) =>{
   return site.titleStore[id];
 }
 
-const redeemCode = async (network,code) => {
-  // console.log("RedeemCode " + JQ(network));
+const redeemCode = async (network,code, force=false) => {
   let configUrl = network.configUrl;
   let privateKey = process.env.PRIVATEKEY;
   let siteSelectorId = network.siteSelectorId;
-
+  
   if(isEmpty(configUrl)){
     logger.error("RedeemCode: configUrl not set in config.");
     return null;
@@ -99,10 +91,29 @@ const redeemCode = async (network,code) => {
     return null;
   }
 
+  let redeemMutex = redeemMutexes[code];
+  if(!redeemMutex){
+    redeemMutexes = LimitObjectProperties(redeemMutexes,MAX_CACHED_ITEMS);
+    redeemMutex = new Mutex();
+    redeemMutexes[code] = redeemMutex;
+  }
+
+  const release = await redeemMutex.acquire();
   let fabric = new Fabric;
   let encryptedPrivateKey = "";
-  let siteId = "";
+  let siteId = null;
+
   try{
+    let answer = redeemCodes[code];
+
+    if(answer && answer["siteId"]){
+      siteId = answer["siteId"];
+    }
+    if(!force && siteId){
+      release();
+      return siteStore[siteId];
+    }
+
     const hash = Hash(code);
     await fabric.init({configUrl,privateKey});
     let client = fabric.client;
@@ -138,17 +149,15 @@ const redeemCode = async (network,code) => {
     }
 
     if(!codeInfo || !codeInfo.ak) {
-      return false;
+      throw "No codeInfo.";
     }
-
-    //console.log("CodeInfo: " + JQ(codeInfo));
 
     siteId = codeInfo.sites[0].siteId; 
     encryptedPrivateKey = atob(codeInfo.ak);
 
   }catch(e){
-    console.error("Error reading site selector:");
-    console.error(e);
+    logger.error("Error reading site selector: " + e);
+    release();
     return null;
   }
 
@@ -157,12 +166,15 @@ const redeemCode = async (network,code) => {
     let newSite = new Site({fabric, siteId});
     await newSite.loadSite();
     siteStore[siteId] = newSite;
+    redeemCodes[code] = {siteId,network};
+    release();
     return newSite;
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error("Error redeeming code:");
     // eslint-disable-next-line no-console
     console.error(error);
+    release();
     return null;
   }
 }
@@ -188,21 +200,31 @@ const main = async () => {
   //Refresh the Site every updateInterval
   setInterval(()=>{refreshSites()}, updateInterval);
 
-  app.get('/settings.hbs', async function(req, res) {
-    //Keep the templates for the device to inject
-    const params = {
-      fabric_node:"{{fabric_node}}",
-      session_id:"{{session_id}}",
-      app_id:"{{app_id}}",
-      app_version:"{{app_version}}",
-      system_version:"{{system_version}}",
-      system_lang:"{{system_lang}}"
-    };
+  app.get('/settings.hbs', function(req, res) {
+    requestsLock
+    .acquire()
+    .then(function([value, release]) {
+      //Keep the templates for the device to inject
+      const params = {
+        fabric_node:"{{fabric_node}}",
+        session_id:"{{session_id}}",
+        app_id:"{{app_id}}",
+        app_version:"{{app_version}}",
+        system_version:"{{system_version}}",
+        system_lang:"{{system_lang}}"
+      };
       res.set('Cache-Control', 'no-cache');
       res.render("settings", params);
+      release();
+    });
+
   });
 
-  app.get('/index.hbs/:network', async function(req, res) {
+  app.get('/index.hbs/:network', function(req, res) {
+    requestsLock
+    .acquire()
+    .then(function([value, release]) {
+
       let network = req.params.network;
       if(!network){
         network = "main";
@@ -215,18 +237,27 @@ const main = async () => {
       };
       res.set('Cache-Control', 'no-cache');
       res.render("index", params);
+      release();
+    });
   });
 
-  app.get('/redeem.hbs', async function(req, res) {
-    const params = {
-      eluvio_background: serverHost + "/eluvio_background_darker.png"
-    };
-    res.set('Cache-Control', 'no-cache');
-    res.render("redeem", params);
+  app.get('/redeem.hbs', function(req, res) {
+    requestsLock
+    .acquire()
+    .then(function([value, release]) {
+      const params = {
+        eluvio_background: serverHost + "/eluvio_background_darker.png"
+      };
+      res.set('Cache-Control', 'no-cache');
+      res.render("redeem", params);
+      release();
+    });
   });
 
   //Serve the site tvml template
   app.get(['/redeemsite.hbs/:network/:code', '/redeemwatch.hbs/:network/:code'], async function(req, res) {
+    const [value, release] = await requestsLock.acquire();
+
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
       let code = req.params.code;
@@ -280,12 +311,16 @@ const main = async () => {
       console.error(e);
       var template = '<document><loadingTemplate><activityIndicator><text>Could not load site from code.</text></activityIndicator></loadingTemplate></document>';
       res.send(template, 404);
+    }finally {
+      release();
     }
   });
 
 
   //Serve the site tvml template
   app.get(['/site.hbs/:network/:index','/watch.hbs/:network/:index'], async function(req, res) {
+    const [value, release] = await requestsLock.acquire();
+
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
       let index = req.params.index;
@@ -316,13 +351,18 @@ const main = async () => {
       console.error(e);
       var template = '<document><loadingTemplate><activityIndicator><text>Error Fetching Site.</text></activityIndicator></loadingTemplate></document>';
       res.send(template, 404);
+    }finally {
+      release();
     }
   });
 
   //Serve the title details from versionHash tvml template
   app.get('/details.hbs/:siteId/:id', async function(req, res) {
+    const [value, release] = await requestsLock.acquire();
+
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
+      console.log("Route "+ req.path);
       let siteId = req.params.siteId;
       let id = req.params.id;
       console.log("Route "+ view + "/" + siteId + "/" + id);
@@ -383,11 +423,14 @@ const main = async () => {
       logger.error(e);
       var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
       res.send(template, 404);
+    }finally {
+      release();
     }
   });
 
   //Serve the networks tvml template
   app.get('/networks.hbs/:network', async function(req, res) {
+    const [value, release] = await requestsLock.acquire();
     try {
       let networks = Object.keys(Config.networks);
       let network = req.params.network;
@@ -406,11 +449,14 @@ const main = async () => {
       console.error(e);
       var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
       res.send(template, 404);
+    }finally {
+      release();
     }
   });
 
   //Serve the sites tvml template
   app.get('/sites.hbs/:network', async function(req, res) {
+    const [value, release] = await requestsLock.acquire();
     try {
       let network = req.params.network;
       logger.info("Route /sites.hbs/" + network);
@@ -435,11 +481,14 @@ const main = async () => {
         console.error(e);
         var template = '<document><loadingTemplate><activityIndicator><text>Could not load sites view.</text></activityIndicator></loadingTemplate></document>';
         res.send(template, 404);
-      }
+    }finally {
+      release();
+    }
   });
 
   //Serve the version information
   app.get('/info', async function(req, res) {
+    const [value, release] = await requestsLock.acquire();
     try{
       fs.readFile('./version.txt', 'utf8', function (err,info) {
         if (err) {
@@ -452,11 +501,14 @@ const main = async () => {
     }catch(err){
       logger.error("Could not read version.txt "+err);
       res.send(err, 404);
+    }finally {
+      release();
     }
   });
 
   //Serve the logs information
   app.get('/log', async function(req, res) {
+    const [value, release] = await requestsLock.acquire();
     try{
       let formatted = Sugar.Date.format(new Date(), '%Y-%m-%d');
       let logfile = `./static/logs/elv-tvos-${formatted}.log`;
@@ -471,31 +523,37 @@ const main = async () => {
     }catch(err){
       logger.error("Could not read log file: " +err);
       res.send(err, 404);
+    }finally {
+      release();
     }
   });
 
-    //Serve playoutUrl
-    app.get('/title/videoUrl/:siteId/:id/:offeringId', async function(req, res) {
-      try{
-        let siteId = req.params.siteId;
-        let id = req.params.id;
-        let offeringId = req.params.offeringId;
-        let title = getTitle({siteId,id});
-        if(!title){
-          throw "title does not exist: " + id;
-        }
-        console.log("title video found: " + JQ(title));
-        let info = {
-          videoUrl: await title.getVideoUrl(offeringId)
-        };
-        res.send(info);
-      }catch(err){
-        logger.error("Could not get title url: " +err);
-        res.send(err, 404);
+  //Serve playoutUrl
+  app.get('/title/videoUrl/:siteId/:id/:offeringId', async function(req, res) {
+    const [value, release] = await requestsLock.acquire();
+    try{
+      let siteId = req.params.siteId;
+      let id = req.params.id;
+      let offeringId = req.params.offeringId;
+      let title = getTitle({siteId,id});
+      if(!title){
+        throw "title does not exist: " + id;
       }
-    });
+      console.log("title video found: " + JQ(title));
+      let info = {
+        videoUrl: await title.getVideoUrl(offeringId)
+      };
+      res.send(info);
+    }catch(err){
+      logger.error("Could not get title url: " +err);
+      res.send(err, 404);
+    }finally {
+      release();
+    }
+  });
 
   const appFunc = async function(req, res) {
+    const [value, release] = await requestsLock.acquire();
     try{
       let sessionTag = CreateID(8);
       const params = {
@@ -508,6 +566,8 @@ const main = async () => {
     }catch(err){
       logger.error("Error serving application.js "+err);
       res.send(err, 500);
+    }finally {
+      release();
     }
   };
 

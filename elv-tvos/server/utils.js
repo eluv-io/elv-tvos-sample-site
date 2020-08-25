@@ -12,6 +12,11 @@ module.exports = {
   CreateID: num => {
     var id = crypto.randomBytes(num / 2).toString('hex');
     return id;
+  },
+
+  RandomInt: max => {
+    return Math.floor(Math.random() * Math.floor(max));
   }
+  
   
 }
