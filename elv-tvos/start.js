@@ -51,18 +51,15 @@ const Hash = (code) => {
 
 var num = 0;
 const refreshSites = async() =>{
+  if(refreshSitesLock.isLocked()){
+    return;
+  }
+
   await refreshSitesLock.acquire();
   try{
-    let newSiteStore = {};
-    let num = 0;
     for (const siteId in siteStore) {
-      if(num > MAX_CACHED_ITEMS){
-        break;
-      }
       let site = siteStore[siteId];
       await site.loadSite();
-      newSiteStore.push(site);
-      num++;
     }
     siteStore=newSiteStore;
   }catch(e){
@@ -465,8 +462,13 @@ const main = async () => {
       let genre = "";
       let date = "";
       let cast = [];
+      let exec_producers = [];
+      let producers = [];
       let length = "";
+      let tvRating = "";
+      let copyright = "";
       let offerings = {};
+
       try {
         if(!title.availableOfferings){
           await title.getAvailableOfferings();
@@ -477,7 +479,8 @@ const main = async () => {
       }
 
       try {
-        director = title.info.talent.director[0].talent_first_name + " " + talent_last_name;
+        let directorObj = title.info.talent.director[0];
+        director = directorObj.talent_first_name + " " + directorObj.talent_last_name;
       }catch(e){}
       try {
         genre = title.info.genre[0];
@@ -487,6 +490,23 @@ const main = async () => {
       }catch(e){}
       try {
         cast = title.info.talent.cast || [];
+      }catch(e){}
+      try {
+        producers = title.info.talent.producer || [];
+      }catch(e){}
+      try {
+        exec_producers = title.info.talent.executive_producer || [];
+      }catch(e){}
+      try {
+        length = title.info.runtime || "";
+      }catch(e){}
+
+      try {
+        tvRating = title.info.tv_rating || "";
+      }catch(e){}
+
+      try {
+        copyright = title.info.copyright || "";
       }catch(e){}
 
       let numOfferings = Object.keys(offerings).length;
@@ -500,7 +520,11 @@ const main = async () => {
         genre,
         date,
         cast,
+        producers,
+        exec_producers,
         title,
+        tvRating,
+        length,
         offerings,
         numOfferings,
         posterUrl,

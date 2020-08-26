@@ -7,11 +7,13 @@
          <stack>
             <title>{{title.display_title}}</title>
             <row>
-               <text>{{length}}</text>
+               <text>{{length}}min</text>
                <text>{{genre}}</text>
                <text>{{date}}</text>
+               <text>{{tvRating}}</text>
             </row>
-            <description handlesOverflow ="true">{{title.info.synopsis}}</description>
+            <description>{{title.info.synopsis}}</description>
+            <text>{{copyright}}</text>
             <row>
                <buttonLockup onselect="playOffering('{{@root.siteId}}','{{@root.titleId}}','default')">
                   <badge src="resource://button-preview" />
@@ -39,7 +41,7 @@
       </shelf>
       {{/greaterThan}}
       <productInfo>
-      <infoTable>
+         <infoTable>
             <info>
                <header>
                   <title>Director</title>
@@ -51,6 +53,26 @@
                   <title>Actors</title>
                </header>
                {{#each cast}}
+                <text>{{talent_first_name}} {{talent_last_name}} </text>
+               {{/each}}
+            </info>
+         </infoTable>
+         <infoTable>
+            <info>
+               <header>
+                  <title>Executive Producers</title>
+               </header>
+               {{#each exec_producers}}
+                <text>{{talent_first_name}} {{talent_last_name}} </text>
+               {{/each}}
+            </info>
+         </infoTable>
+         <infoTable>
+            <info>
+               <header>
+                  <title>Producers</title>
+               </header>
+               {{#each producers}}
                 <text>{{talent_first_name}} {{talent_last_name}} </text>
                {{/each}}
             </info>
