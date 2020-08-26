@@ -17,13 +17,11 @@ class Site {
 
   async loadSite() {
     try {
-
       if(!this.siteLibraryId){
         this.siteLibraryId = await this.client.ContentObjectLibraryId({objectId: this.siteId});
       }
 
       const versionHash = await this.client.LatestVersionHash({objectId: this.siteId});
-
       this.siteInfo = await this.client.ContentObjectMetadata({
         siteId: this.siteId,
         versionHash,
@@ -118,11 +116,9 @@ class Site {
                 //For lazy loading the offerings
                 title.getAvailableOfferings = async () =>{
                   title.availableOfferings = await this.getAvailableOfferings(title);
-                  //console.log("AvailableOfferings: " + JQ(title.availableOfferings));
                 }
 
                 title.getVideoUrl = async (offeringKey) => {
-                  console.log("Getting getVideoUrl for " + title.displayTitle + " offering: " + offeringKey);
                   if(!title.availableOfferings){
                     await title.getAvailableOfferings();
                   }
@@ -132,8 +128,6 @@ class Site {
                   if(!videoUrl){
                     videoUrl = await offering.getVideoUrl(offeringKey);
                   }
-      
-                  console.log("Found video url " + videoUrl);
                   return videoUrl;
                 }
       
@@ -180,7 +174,6 @@ class Site {
           let title = titleInfo[index][titleKey];
 
           if(title["."].resolution_error) {
-            console.log("Resolution error ");
             return;
           }
 
@@ -205,7 +198,14 @@ class Site {
             }
 
             let offering = title.availableOfferings[offeringKey];
-            let videoUrl = offering.videoUrl;
+            let videoUrl = null;
+            
+            if(offering){
+              videoUrl = offering.videoUrl;
+            }else{
+
+            }
+
             if(!videoUrl){
               videoUrl = await offering.getVideoUrl(offeringKey);
             }
@@ -232,10 +232,19 @@ class Site {
     let allowedOfferings = [];
     var newAvailableOfferings = {};
     let availableOfferings = {};
-    try {
+    try{
       availableOfferings = await this.client.AvailableOfferings({versionHash: title.versionHash});
+    }catch(e){
+      //This is just a demo api? Will likely throw so don't log.
+    }
+
+    try {
       if(!isEmpty(this.siteInfo.allowed_offerings)){
         allowedOfferings = this.siteInfo.allowed_offerings;
+      }
+
+      if(isEmpty(availableOfferings)){
+        availableOfferings["default"]={};
       }
       
       for (const key in availableOfferings) {

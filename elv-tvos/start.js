@@ -12,9 +12,11 @@ var logger = require('./server/logger');
 var Sugar = require('sugar');
 var Mutex = require('async-mutex').Mutex;
 var Semaphore = require('async-mutex').Semaphore;
+const { ElvClient } = require('@eluvio/elv-client-js/src/ElvClient');
 
 const MAX_CACHED_ITEMS = 100;
 const MAX_REQUESTS = 500;
+const CACHE_EXPIRE_DURATION_MS = 1000*60*60*2;
 
 const refreshSitesLock = new Mutex();
 const requestsLock = new Semaphore(MAX_REQUESTS);
@@ -51,13 +53,18 @@ var num = 0;
 const refreshSites = async() =>{
   await refreshSitesLock.acquire();
   try{
-    for (const code in redeemCodes) {
-      let {siteId,network} = redeemCodes[code];
-      if(!siteId){
-        continue;
+    let newSiteStore = {};
+    let num = 0;
+    for (const siteId in siteStore) {
+      if(num > MAX_CACHED_ITEMS){
+        break;
       }
-      redeemCode(network,code,true);
+      let site = siteStore[siteId];
+      await site.loadSite();
+      newSiteStore.push(site);
+      num++;
     }
+    siteStore=newSiteStore;
   }catch(e){
     logger.error("Could not refresh sites: "+e);
   }finally{
@@ -71,7 +78,94 @@ const getTitle = ({siteId,id}) =>{
   return site.titleStore[id];
 }
 
-const redeemCode = async (network,code, force=false) => {
+const redeemCode2 = async (network,code, force=false) => {
+  let configUrl = network.configUrl;
+  if(isEmpty(configUrl)){
+    logger.error("RedeemCode: configUrl not set in config.");
+    return null;
+  }
+
+  let siteSelectorId = network.siteSelectorId;
+  if(isEmpty(siteSelectorId)){
+    logger.error("siteSelectorId not set in config.");
+    return null;
+  }
+
+  let redeemMutex = redeemMutexes[code];
+  if(!redeemMutex){
+    redeemMutexes = LimitObjectProperties(redeemMutexes,MAX_CACHED_ITEMS);
+    redeemMutex = new Mutex();
+    redeemMutexes[code] = redeemMutex;
+  }
+
+  const release = await redeemMutex.acquire();
+  let site = null;
+  try{
+    let answer = redeemCodes[code];
+    let siteId = null;
+    if(answer && answer["siteId"]){
+      siteId = answer["siteId"];
+    }
+    if(!force && siteId && siteStore[siteId]){
+      release();
+      return siteStore[siteId];
+    }
+
+    const client = await ElvClient.FromConfigurationUrl({
+      configUrl
+    });
+    // client.ToggleLogging(true);
+
+    const wallet = client.GenerateWallet();
+    const signer = wallet.AddAccountFromMnemonic({mnemonic:wallet.GenerateMnemonic()});
+    client.SetSigner({signer});
+
+    //Get the issuer
+    let prefix = code.substr(0,3);
+    let accessCode = code.substr(3);
+
+    let siteSelectorHash = await client.LatestVersionHash({objectId: siteSelectorId});
+    let meta = await client.ContentObjectMetadata({
+      versionHash: siteSelectorHash,
+      metadataSubtree: "public/sites"
+    });
+
+    let issuer = meta[prefix].issuer;
+
+    siteId = await client.RedeemCode({
+      issuer,
+      code: accessCode
+    });
+    
+    let fabric = new Fabric;
+    await fabric.initFromClient({client});
+    let newSite = new Site({fabric, siteId});
+    await newSite.loadSite();
+    siteStore[siteId] = newSite;
+    redeemCodes[code] = {siteId,network};
+    site = newSite;
+
+    setTimeout(()=>{
+      try{
+        delete siteStore[siteId];
+        delete redeemCodes[code];
+        delete redeemMutexes[code];
+      }catch(e){
+        logger.error(e);
+      }
+    }, 
+    CACHE_EXPIRE_DURATION_MS);
+
+  }catch(e){
+    logger.error("Error reading site selector: " + JQ(e));
+  }finally{
+    release();
+  }
+
+  return site;
+}
+
+const redeemCode = async (network,code,force=false) => {
   let configUrl = network.configUrl;
   let privateKey = process.env.PRIVATEKEY;
   let siteSelectorId = network.siteSelectorId;
@@ -117,11 +211,14 @@ const redeemCode = async (network,code, force=false) => {
     const hash = Hash(code);
     await fabric.init({configUrl,privateKey});
     let client = fabric.client;
-    let siteSelector = await client.LatestVersionHash({objectId: siteSelectorId});
+
+    let siteSelector = await client.LatestVersionHash({objectId:siteSelectorId});
+    
     const isGlobalSelector = (await client.ContentObjectMetadata({
       versionHash: siteSelector,
       metadataSubtree: "public/site_selector_type"
     })) === "global";
+
 
     let codeInfo;
     if(isGlobalSelector) {
@@ -132,10 +229,14 @@ const redeemCode = async (network,code, force=false) => {
       });
 
       for(let i = 0; i < selectorList.length; i++) {
-        codeInfo = await client.ContentObjectMetadata({
-          versionHash: siteSelector,
-          metadataSubtree: `public/site_selectors/${i}/${hash}`
-        });
+        try{
+          codeInfo = await client.ContentObjectMetadata({
+            versionHash: siteSelector,
+            metadataSubtree: `public/site_selectors/${i}/${hash}`
+          });
+        }catch(e){
+          console.error("Error getting codeInfo: " + e);
+        }
 
         if(codeInfo && codeInfo.ak) {
           break;
@@ -156,7 +257,7 @@ const redeemCode = async (network,code, force=false) => {
     encryptedPrivateKey = atob(codeInfo.ak);
 
   }catch(e){
-    logger.error("Error reading site selector: " + e);
+    logger.error("Error reading site selector: " + JQ(e));
     release();
     return null;
   }
@@ -170,10 +271,7 @@ const redeemCode = async (network,code, force=false) => {
     release();
     return newSite;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error("Error redeeming code:");
-    // eslint-disable-next-line no-console
-    console.error(error);
+    logger.error("Error redeeming code:" + JQ(error));
     release();
     return null;
   }
@@ -191,7 +289,7 @@ const main = async () => {
     console.error(error);
     process.exit(1);
   }
-  
+
   app.engine('hbs', exbars({defaultLayout: false}));
   app.set('view engine', 'hbs');
   app.set('views', path.join(__dirname, '/views'));
@@ -263,14 +361,13 @@ const main = async () => {
       let code = req.params.code;
       let network = req.params.network;
 
-      // console.log("Route "+ view + "/" + network + "/" + code);
       if(!network){
         throw "No network for request";
       }
 
       let site = null;
-      
-      site = await redeemCode(Config.networks[network],code);
+
+      site = await redeemCode2(Config.networks[network], code);
       if(!site){
         throw "Could not get Site from code: " + code;
       }
@@ -308,9 +405,7 @@ const main = async () => {
       res.set('Cache-Control', 'max-age=300');
       res.render(view, params);
     }catch(e){
-      console.error(e);
-      var template = '<document><loadingTemplate><activityIndicator><text>Could not load site from code.</text></activityIndicator></loadingTemplate></document>';
-      res.send(template, 404);
+      res.send(e, 404);
     }finally {
       release();
     }
@@ -325,7 +420,6 @@ const main = async () => {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
       let index = req.params.index;
       let network = req.params.network;
-      console.log("Route "+ view + "/" + network + "/" + index);
       let sites = networkSites[network];
       let site = sites[index];
       let titles = site.siteInfo.titles || [];
@@ -362,13 +456,9 @@ const main = async () => {
 
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
-      console.log("Route "+ req.path);
       let siteId = req.params.siteId;
       let id = req.params.id;
-      console.log("Route "+ view + "/" + siteId + "/" + id);
-
       let title = getTitle({siteId,id});
-      console.log("Title found: " + title.display_title);
       let site = siteStore[siteId];
 
       let director = "";
@@ -385,6 +475,7 @@ const main = async () => {
       }catch(e){
         console.error(e);
       }
+
       try {
         director = title.info.talent.director[0].talent_full_name;
       }catch(e){}
@@ -434,8 +525,6 @@ const main = async () => {
     try {
       let networks = Object.keys(Config.networks);
       let network = req.params.network;
-      console.log("Route /networks.hbs/" + network);
-
       const params = {
         eluvio_logo: serverHost + "/logo.png",
         eluvio_background: serverHost + "/eluvio_background.png",
@@ -540,7 +629,7 @@ const main = async () => {
       if(!title){
         throw "title does not exist: " + id;
       }
-      console.log("title video found: " + JQ(title));
+
       let info = {
         videoUrl: await title.getVideoUrl(offeringId)
       };

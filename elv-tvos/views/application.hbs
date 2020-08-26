@@ -111,8 +111,8 @@ async function documentOnSelect(event) {
     console.log('Document set for menuItem.');
   } catch (e) {
     createAlert(
-      'Page Load Error',
-      'There was an error attempting to load the homepage.\n\n Please check your network connection and try again later.'
+      'A problem occured',
+      'Please check your internet connection and try again.'
     );
   }
 }
@@ -182,8 +182,8 @@ function pushTemplate(text) {
       console.log('Document set for menuItem.');
     } catch (e) {
       createAlert(
-        'Page Load Error',
-        'There was an error attempting to load the homepage.\n\n Please check your network connection and try again later.'
+        'A problem occured',
+        'Please check your internet connection and try again.'
       );
     }
   });
@@ -215,8 +215,8 @@ function replaceTemplate(text) {
       console.log('Document set for menuItem.');
     } catch (e) {
       createAlert(
-        'Page Load Error',
-        'There was an error attempting to load the homepage.\n\n Please check your network connection and try again later.'
+        'A problem occured',
+        'Please check your internet connection and try again.'
       );
     }
   });
@@ -289,8 +289,8 @@ async function loadTitle(siteId, id) {
     console.error(e);
     dismissModal();
     createAlert(
-      'Server Error',
-      'There was an error loading the title.'
+      'A problem occured',
+      'Please check your internet connection and try again.'
     );
   }
 }
@@ -317,16 +317,16 @@ async function loadRedeemIndex() {
         }
       } catch (e) {
         createAlert(
-          'Server Error',
-          'There was an error loading the site.'
+          'A problem occured',
+          'Please try loading the app again.'
         );
       }
     });
   } catch (e) {
     console.error(e);
     createAlert(
-      'Server Error',
-      'There was an error loading the page.'
+      'A problem occured',
+      'Please check your internet connection and try again.'
     );
   }
 }
@@ -346,8 +346,8 @@ async function loadNetworksForm() {
     console.error(e);
     dismissModal();
     createAlert(
-      'Server Error',
-      'There was an error loading the page.'
+      'A problem occured',
+      'Please check your internet connection and try again.'
     );
   }
 }
@@ -371,8 +371,8 @@ async function loadView(view, showLoading = true) {
       dismissModal();
     }
     createAlert(
-      'Server Error',
-      'There was an error loading the page.'
+      'A problem occured',
+      'Please check your internet connection and try again.'
     );
   }
 }
@@ -411,8 +411,8 @@ async function loadRedeemSite(code) {
     console.error(e);
     dismissModal();
     createAlert(
-      'Server Error',
-      'There was an error loading the site.'
+      'Could not verify code.',
+      'Please try again.'
     );
   }
 }
@@ -432,8 +432,8 @@ async function loadSite(index) {
     console.error(e);
     dismissModal();
     createAlert(
-      'Server Error',
-      'There was an error loading the title.'
+      'A problem occured',
+      'Please check your internet connection and try again.'
     );
   }
 }
@@ -479,8 +479,8 @@ App.onLaunch = function (options) {
     configUrl = config.networks[network].configUrl;
   } catch (e) {
     createAlert(
-      'Server Error',
-      'There was an error getting the configuration from the server. ' + e
+      'A problem occured',
+      'Please check your internet connection and try again.'
     );
     return;
   }
@@ -500,22 +500,22 @@ App.onLaunch = function (options) {
             baseURL = options.BASEURL;
           } catch (e) {
             createAlert(
-              'Server Error',
-              'There was an error loading the site.'
+              'A problem occured',
+              'Please check your internet connection and try again.'
             );
           }
         },
         function (status) {
           createAlert(
-            'Server Error',
-            'There was an error contacting the server.'
+            'A problem occured',
+            'Please check your internet connection and try again.'
           );
         }
       );
     } else {
       createAlert(
-        'Evaluate Scripts Error',
-        'There was an error attempting to evaluate the external JavaScript files.\n\n Please check your network connection and try again later.'
+        'A problem occured',
+        'Please check your internet connection and try again.'
       );
     }
   });

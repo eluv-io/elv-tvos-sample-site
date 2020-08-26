@@ -4,6 +4,8 @@ const { JQ } = require('./utils');
 module.exports = class Fabric {
   async init({configUrl, privateKey}){
     this.client = await ElvClient.FromConfigurationUrl({ configUrl });
+    this.client.ToggleLogging(true);
+    //await this.client.UseRegion({region:"na-west-south"});
     this.wallet = this.client.GenerateWallet();
     this.signer = this.wallet.AddAccount({
       privateKey
@@ -18,6 +20,11 @@ module.exports = class Fabric {
     this.signer = await this.wallet.AddAccountFromEncryptedPK({encryptedPrivateKey, password});
     this.client.SetSigner({signer:this.signer});
     this.configUrl = configUrl;
+  }
+
+  async initFromClient({client}){
+    this.client = client;
+    this.configUrl = client.configUrl;
   }
 
   async findSites() {
