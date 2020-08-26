@@ -477,7 +477,7 @@ const main = async () => {
       }
 
       try {
-        director = title.info.talent.director[0].talent_full_name;
+        director = title.info.talent.director[0].talent_first_name + " " + talent_last_name;
       }catch(e){}
       try {
         genre = title.info.genre[0];
