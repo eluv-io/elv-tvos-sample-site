@@ -18,7 +18,6 @@ var sites;
 var getJSON = function (url) {
   return new Promise(function (resolve, reject) {
     var xhr = new XMLHttpRequest();
-    console.log('getJSON url: ' + url);
     xhr.open('get', url, true);
     xhr.responseType = 'json';
     xhr.onload = function () {
@@ -50,12 +49,10 @@ var createAlert = function (title, description) {
 };
 
 function goBack() {
-  console.log('goBack');
   navigationDocument.popDocument();
 }
 
 function dismissModal() {
-  console.log('dismissModal');
   navigationDocument.dismissModal();
 }
 
@@ -71,7 +68,6 @@ function loadingTemplate() {
 }
 
 var fetch = function (url, responseType) {
-  console.log('fetch: ' + url);
   return new Promise(function (resolve, reject) {
     var xhr = new XMLHttpRequest();
     xhr.open('get', url, true);
@@ -79,7 +75,6 @@ var fetch = function (url, responseType) {
     xhr.onreadystatechange = function (event) {
       if (xhr.readyState === 4) {
         if (xhr.status === 200) {
-          console.log(xhr.response);
           resolve(xhr.response);
         } else {
           console.error('Error', xhr.statusText);
@@ -102,13 +97,10 @@ async function documentOnSelect(event) {
     }
     // Always get a new featureDoc since the old one might be stale from a reload
     const documentURL = baseURL + target.getAttribute('documentURL');
-    console.log('onSelect for ' + documentURL);
     let docText = await fetch(documentURL, 'text');
     let resolvedText = resolveTemplate(docText);
-    console.log(`Resolved for document: ${documentURL} \n ${resolvedText}`);
     var featureDoc = parser.parseFromString(resolvedText, 'application/xml');
     feature.setDocument(featureDoc, target);
-    console.log('Document set for menuItem.');
   } catch (e) {
     createAlert(
       'A problem occured',
@@ -142,7 +134,6 @@ function resolveTemplate(text) {
 function getTemplate(extension) {
   var templateXHR = new XMLHttpRequest();
   var url = baseURL + extension;
-  console.log('Loading template: ' + url);
 
   // loadingTemplate();
   templateXHR.responseType = 'text';
@@ -160,7 +151,6 @@ function getTemplate(extension) {
 function pushTemplate(text) {
   // compile the template
   let resolved = resolveTemplate(text);
-  console.log('Resolved Template: ' + resolved);
   let parser = new DOMParser();
   let document = parser.parseFromString(resolved, 'application/xml');
   document.addEventListener('select', async (event) => {
@@ -173,13 +163,10 @@ function pushTemplate(text) {
       }
       // Always get a new featureDoc since the old one might be stale from a reload
       const documentURL = baseURL + target.getAttribute('documentURL');
-      console.log('onSelect for ' + documentURL);
       let docText = await fetch(documentURL, 'text');
       let resolvedText = resolveTemplate(docText);
-      console.log(`Resolved for document: ${documentURL} \n ${resolvedText}`);
       let featureDoc = parser.parseFromString(resolvedText, 'application/xml');
       feature.setDocument(featureDoc, target);
-      console.log('Document set for menuItem.');
     } catch (e) {
       createAlert(
         'A problem occured',
@@ -193,7 +180,6 @@ function pushTemplate(text) {
 
 function replaceTemplate(text) {
   let resolved = resolveTemplate(text);
-  console.log('replaceTemplate: ' + resolved);
   let parser = new DOMParser();
   let document = parser.parseFromString(resolved, 'application/xml');
   document.addEventListener('select', async (event) => {
@@ -206,13 +192,10 @@ function replaceTemplate(text) {
       }
       // Always get a new featureDoc since the old one might be stale from a reload
       const documentURL = baseURL + target.getAttribute('documentURL');
-      console.log('onSelect for ' + documentURL);
       let docText = await fetch(documentURL, 'text');
       let resolvedText = resolveTemplate(docText);
-      console.log(`Resolved for document: ${documentURL} \n ${resolvedText}`);
       let featureDoc = parser.parseFromString(resolvedText, 'application/xml');
       feature.setDocument(featureDoc, target);
-      console.log('Document set for menuItem.');
     } catch (e) {
       createAlert(
         'A problem occured',
@@ -222,7 +205,6 @@ function replaceTemplate(text) {
   });
   var currentDoc = getActiveDocument();
 
-  console.log('Replace ' + document + ' with ' + currentDoc);
   if (currentDoc) {
     navigationDocument.replaceDocument(document, currentDoc);
   } else {
@@ -233,14 +215,12 @@ function replaceTemplate(text) {
 }
 
 function playMedia(mediaURL, mediaType) {
-  console.log('playMedia: ' + mediaURL);
   var singleMediaItem = new MediaItem(mediaType, mediaURL);
   var mediaList = new Playlist();
 
   mediaList.push(singleMediaItem);
   var myPlayer = new Player();
   myPlayer.addEventListener('stateDidChange', (event) => {
-    console.log('player stateDidChange ' + JSON.stringify(event, 0, 2));
     if (event.state == 'end') {
     }
   });
@@ -299,16 +279,13 @@ async function loadRedeemIndex() {
   const documentURL = baseURL + 'index.hbs/' + network;
   try {
     let docText = await fetch(documentURL, 'text');
-    console.log('Site text loaded: ' + docText);
     let resolvedText = resolveTemplate(docText);
-    console.log('\n\nResolvedText: ' + docText);
     let document = pushTemplate(resolvedText);
     document.addEventListener('select', async (event) => {
       try {
         if(event.target.getAttribute("id") == 'redeemSubmit'){
           const textField = document.getElementById('redeemField');
           const value = textField.getFeature('Keyboard').text;
-          console.log('Redeem Selected! ' + value);
           loadRedeemSite(value);
         }
       } catch (e) {
@@ -328,14 +305,11 @@ async function loadRedeemIndex() {
 }
 
 async function loadNetworksForm() {
-  console.log('LOAD NETWORKS FORM');
   try {
     loadingTemplate();
     const documentURL = baseURL + 'networks.hbs/'+network;
     let docText = await fetch(documentURL, 'text');
-    console.log('Site text loaded: ' + docText);
     let resolvedText = resolveTemplate(docText);
-    console.log('\n\nResolvedText: ' + docText);
     let document = pushTemplate(resolvedText);
     dismissModal();
   } catch (e) {
@@ -349,16 +323,13 @@ async function loadNetworksForm() {
 }
 
 async function loadView(view, showLoading = true) {
-  console.log('LOAD ' + view);
   try {
     if (showLoading) {
       loadingTemplate();
     }
     const documentURL = baseURL + view + '/' + network;
     let docText = await fetch(documentURL, 'text');
-    console.log('Site text loaded: ' + docText);
     let resolvedText = resolveTemplate(docText);
-    console.log('\n\nResolvedText: ' + docText);
     let document = pushTemplate(resolvedText);
     dismissModal();
   } catch (e) {
@@ -374,7 +345,6 @@ async function loadView(view, showLoading = true) {
 }
 
 async function loadNetwork(value) {
-  console.log('Network set to: ' + value);
   if (value && localStorage) {
     localStorage.setItem('network', value);
     network = value;
@@ -383,25 +353,19 @@ async function loadNetwork(value) {
 }
 
 async function loadRedeemSite(code) {
-  console.log('LOAD REDEEM SITE');
   try {
     loadingTemplate();
     const documentURL = baseURL + 'redeemsite.hbs/' + network + '/' + code;
     let docText = await fetch(documentURL, 'text');
-    console.log('Site text loaded: ' + docText);
     let resolvedText = resolveTemplate(docText);
-    console.log('\n\nResolvedText: ' + docText);
     let document = pushTemplate(resolvedText);
     dismissModal();
     const siteInfoEl = document.getElementById('site_info');
     const value = siteInfoEl.getAttribute('data-value');
     const siteInfo = JSON.parse(value);
-    console.log('SiteInfo Node: ' + siteInfoEl.nodeName);
-    console.log('SiteInfo Value: ' + value);
     if (siteInfo && localStorage) {
       sites[code] = siteInfo;
       localStorage.setItem('codes', JSON.stringify(sites));
-      console.log('SiteInfo saved');
     }
   } catch (e) {
     console.error(e);
@@ -414,14 +378,11 @@ async function loadRedeemSite(code) {
 }
 
 async function loadSite(index) {
-  console.log('LOAD SITE: ' + index);
   try {
     loadingTemplate();
     const documentURL = baseURL + 'site.hbs/' + network + '/' + index;
     let docText = await fetch(documentURL, 'text');
-    console.log('Site text loaded: ' + docText);
     let resolvedText = resolveTemplate(docText);
-    console.log('\n\nResolvedText: ' + docText);
     let document = pushTemplate(resolvedText);
     dismissModal();
   } catch (e) {
@@ -435,14 +396,12 @@ async function loadSite(index) {
 }
 
 async function refreshMainPage() {
-  console.log('refreshMainPage');
   const newDoc = await fetch(baseURL + extension);
   const oldMain = navigationDocument.documents[0];
   navigationDocument.replaceDocument(newDoc, oldMain);
 }
 
 App.onLaunch = function (options) {
-  console.log('App launch.');
   launchOptions = options;
   baseURL = options.BASEURL;
   //Templates
@@ -456,7 +415,6 @@ App.onLaunch = function (options) {
       sites = {};
     } else {
       sites = JSON.parse(sites);
-      console.log('Retrieved sites from storage: ' + JSON.stringify(sites));
     }
 
     network = localStorage.getItem('network');
@@ -471,7 +429,6 @@ App.onLaunch = function (options) {
   var configUrl = '';
   try {
     config = JSON.parse('{{{CONFIG}}}');
-    console.log('Config: ' + JSON.stringify(config));
     configUrl = config.networks[network].configUrl;
   } catch (e) {
     createAlert(
