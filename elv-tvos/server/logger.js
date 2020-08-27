@@ -2,7 +2,7 @@ const winston = require('winston');
 require('winston-daily-rotate-file');
 var transport = new (winston.transports.DailyRotateFile)({
     filename: 'elv-tvos-%DATE%.log',
-    dirname: './static/logs',
+    dirname: './logs',
     datePattern: 'YYYY-MM-DD',
     maxSize: '100k',
     maxFiles: '100',

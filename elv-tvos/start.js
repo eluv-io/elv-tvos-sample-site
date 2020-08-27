@@ -13,6 +13,8 @@ var Sugar = require('sugar');
 var Mutex = require('async-mutex').Mutex;
 var Semaphore = require('async-mutex').Semaphore;
 const { ElvClient } = require('@eluvio/elv-client-js/src/ElvClient');
+const morgan = require('morgan');
+var rfs = require('rotating-file-stream')
 
 const MAX_CACHED_ITEMS = 100;
 const MAX_REQUESTS = 500;
@@ -162,6 +164,14 @@ const main = async () => {
   app.engine('hbs', exbars({defaultLayout: false}));
   app.set('view engine', 'hbs');
   app.set('views', path.join(__dirname, '/views'));
+
+  // create a rotating write stream
+  var accessLogStream = rfs.createStream('requests.log', {
+    interval: '1d', // rotate daily
+    path: path.join(__dirname, 'logs')
+  })
+
+  app.use(morgan('combined', { stream: accessLogStream }));
 
   app.get('/settings.hbs', function(req, res) {
     requestsLock
@@ -447,28 +457,6 @@ const main = async () => {
       });
     }catch(err){
       logger.error("Could not read package.json "+ err);
-      res.send(err, 404);
-    }finally {
-      release();
-    }
-  });
-
-  //Serve the logs information
-  app.get('/log', async function(req, res) {
-    const [value, release] = await requestsLock.acquire();
-    try{
-      let formatted = Sugar.Date.format(new Date(), '%Y-%m-%d');
-      let logfile = `./static/logs/elv-tvos-${formatted}.log`;
-      fs.readFile(logfile, 'utf8', function (err,info) {
-        if (err) {
-          logger.error("Could not read file " + logfile + "\n" +err);
-          res.send(err, 404);
-          return err;
-        }
-        res.send(info);
-      });
-    }catch(err){
-      logger.error("Could not read log file: " +err);
       res.send(err, 404);
     }finally {
       release();
