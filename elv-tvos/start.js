@@ -20,6 +20,8 @@ const CACHE_EXPIRE_DURATION_MS = 1000*60*60*2;
 
 const refreshSitesLock = new Mutex();
 const requestsLock = new Semaphore(MAX_REQUESTS);
+const redeemCodesMutex = new Mutex();
+const redeemMutexesMutex = new Mutex();
 
 var app = express();
 
@@ -62,11 +64,14 @@ const redeemCode2 = async (network,code, force=false) => {
     return null;
   }
 
+  redeemMutexesMutex.acquire();
   let redeemMutex = redeemMutexes[code];
+  redeemMutexesMutex.release();
   if(!redeemMutex){
-    redeemMutexes = LimitObjectProperties(redeemMutexes,MAX_CACHED_ITEMS);
     redeemMutex = new Mutex();
+    redeemMutexesMutex.acquire();
     redeemMutexes[code] = redeemMutex;
+    redeemMutexesMutex.release();
   }
 
   const release = await redeemMutex.acquire();
@@ -75,7 +80,10 @@ const redeemCode2 = async (network,code, force=false) => {
   let siteId = null;
   let fabric = null;
   try{
+    redeemCodesMutex.acquire();
     let answer = redeemCodes[code];
+    redeemCodesMutex.release();
+
     if(answer && answer["fabric"]){
       fabric = answer["fabric"];
       siteId = answer["siteId"];
@@ -114,8 +122,13 @@ const redeemCode2 = async (network,code, force=false) => {
       //Kill the cache after expiration time
       setTimeout(()=>{
         try{
+          redeemCodesMutex.acquire();
           delete redeemCodes[code];
+          redeemCodesMutex.release();
+
+          redeemMutexesMutex.acquire();
           delete redeemMutexes[code];
+          redeemMutexesMutex.release();
         }catch(e){
           logger.error(e);
         }
@@ -125,13 +138,17 @@ const redeemCode2 = async (network,code, force=false) => {
 
     let newSite = new Site({fabric, siteId});
     await newSite.loadSite();
+    redeemCodesMutex.acquire();
     redeemCodes[code] = {siteId, fabric, network};
+    redeemCodesMutex.release();
     site = newSite;
 
   }catch(e){
     logger.error("Error reading site selector: " + JQ(e));
   }finally{
     release();
+    redeemCodesMutex.release();
+    redeemMutexesMutex.release();
   }
 
   return site;
