@@ -80,9 +80,8 @@ const redeemCode2 = async (network,code, force=false) => {
       fabric = answer["fabric"];
       siteId = answer["siteId"];
     }
-    if(!force && fabric && siteId){
-
-    }else{
+    if(force || !fabric || !siteId){
+      // Redeem the ticket
       const client = await ElvClient.FromConfigurationUrl({
         configUrl
       });
@@ -111,6 +110,17 @@ const redeemCode2 = async (network,code, force=false) => {
 
       fabric = new Fabric;
       await fabric.initFromClient({client});
+
+      //Kill the cache after expiration time
+      setTimeout(()=>{
+        try{
+          delete redeemCodes[code];
+          delete redeemMutexes[code];
+        }catch(e){
+          logger.error(e);
+        }
+      }, 
+      CACHE_EXPIRE_DURATION_MS);
     }
 
     let newSite = new Site({fabric, siteId});
@@ -118,20 +128,9 @@ const redeemCode2 = async (network,code, force=false) => {
     redeemCodes[code] = {siteId, fabric, network};
     site = newSite;
 
-    setTimeout(()=>{
-      try{
-        delete redeemCodes[code];
-        delete redeemMutexes[code];
-      }catch(e){
-        logger.error(e);
-      }
-    }, 
-    CACHE_EXPIRE_DURATION_MS);
-
   }catch(e){
     logger.error("Error reading site selector: " + JQ(e));
   }finally{
-
     release();
   }
 
