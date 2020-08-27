@@ -248,16 +248,13 @@ function playMedia(mediaURL, mediaType) {
   myPlayer.play();
 }
 
-async function playOffering(siteId, titleId, offeringKey){
+async function playOffering(siteIndex, titleId, offeringKey){
   try{
     loadingTemplate();
-    console.log('playOffering site: '+ siteId+ " title: " + titleId +" offering: " + offeringKey);
-    let url = baseURL + "title/videoUrl/" + siteId + "/" + titleId + "/"+ offeringKey;
+    let url = baseURL + "title/videoUrl/" + network + "/" + siteIndex + "/" + titleId + "/"+ offeringKey;
     let json = await getJSON(url);
     let videoUrl = json.videoUrl.replace('\{\{\{host\}\}\}',currentHost);
-    console.log("videoUrl host replace: " + videoUrl);
     videoUrl = videoUrl.replace('\{\{params\}\}',getQueryParams());
-    console.log("videoUrl params replace: " + videoUrl);
     playMedia(videoUrl,'video');
     dismissModal();
   } catch (e) {
@@ -269,12 +266,11 @@ async function playOffering(siteId, titleId, offeringKey){
   }
 }
 
-async function loadTitle(siteId, id) {
-  //XXX: siteIndex is not passed for some reason
-  console.log('LOAD TITLE:' + siteId + "," + id);
+async function loadTitle(siteIndex, id) {
+
   try {
     loadingTemplate();
-    const documentURL = baseURL + 'details.hbs/' +siteId + "/" + id;
+    const documentURL = baseURL + 'details.hbs/' + network + "/"+ siteIndex + "/" + id;
     let text = await fetch(documentURL, 'text');
     var template = Handlebars.compile(text);
     var params = `&session_id=${sessionTag}&app_id=${Device.appIdentifier}&app_version=${Device.appVersion}&system_version=${Device.systemVersion}&system_lang=${Settings.language}`;

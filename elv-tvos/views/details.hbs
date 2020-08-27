@@ -15,7 +15,7 @@
             <description>{{title.info.synopsis}}</description>
             <text>{{copyright}}</text>
             <row>
-               <buttonLockup onselect="playOffering('{{@root.siteId}}','{{@root.titleId}}','default')">
+               <buttonLockup onselect="playOffering('{{@root.code}}','{{@root.titleId}}','default')">
                   <badge src="resource://button-preview" />
                   <title>Watch</title>
                </buttonLockup>
@@ -31,7 +31,7 @@
             <section>
             {{#each offerings}}
                {{#ifnoteq display_name "Watch"}}
-               <lockup onselect="playOffering('{{@root.siteId}}','{{@root.titleId}}','{{key}}')">
+               <lockup onselect="playOffering('{{@root.code}}','{{@root.titleId}}','{{key}}')">
                   <img src="{{@root.posterUrl}}" width="200" height="120" />
                   <title>{{display_name}}</title>
                </lockup>

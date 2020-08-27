@@ -24,7 +24,6 @@ const requestsLock = new Semaphore(MAX_REQUESTS);
 var app = express();
 
 var networkSites = {};
-var siteStore = {};
 var redeemCodes = {};
 var redeemMutexes = {};
 var date = "";
@@ -49,33 +48,8 @@ const Hash = (code) => {
   return chars.reduce((sum, char, i) => (chars[i + 1] ? (sum * 2) + char * chars[i+1] * (i + 1) : sum + char), 0).toString();
 };
 
-var num = 0;
-const refreshSites = async() =>{
-  if(refreshSitesLock.isLocked()){
-    return;
-  }
-
-  await refreshSitesLock.acquire();
-  try{
-    for (const siteId in siteStore) {
-      let site = siteStore[siteId];
-      await site.loadSite();
-    }
-    siteStore=newSiteStore;
-  }catch(e){
-    logger.error("Could not refresh sites: "+e);
-  }finally{
-    refreshSitesLock.release();
-    num++;
-  }
-}
-
-const getTitle = ({siteId,id}) =>{
-  let site = siteStore[siteId];
-  return site.titleStore[id];
-}
-
 const redeemCode2 = async (network,code, force=false) => {
+
   let configUrl = network.configUrl;
   if(isEmpty(configUrl)){
     logger.error("RedeemCode: configUrl not set in config.");
@@ -96,55 +70,56 @@ const redeemCode2 = async (network,code, force=false) => {
   }
 
   const release = await redeemMutex.acquire();
+
   let site = null;
+  let siteId = null;
+  let fabric = null;
   try{
     let answer = redeemCodes[code];
-    let siteId = null;
-    if(answer && answer["siteId"]){
+    if(answer && answer["fabric"]){
+      fabric = answer["fabric"];
       siteId = answer["siteId"];
     }
-    if(!force && siteId && siteStore[siteId]){
-      release();
-      return siteStore[siteId];
+    if(!force && fabric && siteId){
+
+    }else{
+      const client = await ElvClient.FromConfigurationUrl({
+        configUrl
+      });
+      // client.ToggleLogging(true);
+
+      const wallet = client.GenerateWallet();
+      const signer = wallet.AddAccountFromMnemonic({mnemonic:wallet.GenerateMnemonic()});
+      client.SetSigner({signer});
+
+      //Get the issuer
+      let prefix = code.substr(0,3);
+      let accessCode = code.substr(3);
+
+      let siteSelectorHash = await client.LatestVersionHash({objectId: siteSelectorId});
+      let meta = await client.ContentObjectMetadata({
+        versionHash: siteSelectorHash,
+        metadataSubtree: "public/sites"
+      });
+
+      let issuer = meta[prefix].issuer;
+
+      siteId = await client.RedeemCode({
+        issuer,
+        code: accessCode
+      });
+
+      fabric = new Fabric;
+      await fabric.initFromClient({client});
     }
 
-    const client = await ElvClient.FromConfigurationUrl({
-      configUrl
-    });
-    // client.ToggleLogging(true);
-
-    const wallet = client.GenerateWallet();
-    const signer = wallet.AddAccountFromMnemonic({mnemonic:wallet.GenerateMnemonic()});
-    client.SetSigner({signer});
-
-    //Get the issuer
-    let prefix = code.substr(0,3);
-    let accessCode = code.substr(3);
-
-    let siteSelectorHash = await client.LatestVersionHash({objectId: siteSelectorId});
-    let meta = await client.ContentObjectMetadata({
-      versionHash: siteSelectorHash,
-      metadataSubtree: "public/sites"
-    });
-
-    let issuer = meta[prefix].issuer;
-
-    siteId = await client.RedeemCode({
-      issuer,
-      code: accessCode
-    });
-    
-    let fabric = new Fabric;
-    await fabric.initFromClient({client});
     let newSite = new Site({fabric, siteId});
     await newSite.loadSite();
-    siteStore[siteId] = newSite;
-    redeemCodes[code] = {siteId,network};
+    redeemCodes[code] = {siteId, fabric, network};
     site = newSite;
 
     setTimeout(()=>{
       try{
-        delete siteStore[siteId];
         delete redeemCodes[code];
         delete redeemMutexes[code];
       }catch(e){
@@ -156,144 +131,21 @@ const redeemCode2 = async (network,code, force=false) => {
   }catch(e){
     logger.error("Error reading site selector: " + JQ(e));
   }finally{
+
     release();
   }
 
   return site;
 }
 
-const redeemCode = async (network,code,force=false) => {
-  let configUrl = network.configUrl;
-  let privateKey = process.env.PRIVATEKEY;
-  let siteSelectorId = network.siteSelectorId;
-  
-  if(isEmpty(configUrl)){
-    logger.error("RedeemCode: configUrl not set in config.");
-    return null;
-  }
-
-  if(isEmpty(privateKey)){
-    logger.error("RedeemCode: No privateKey set.");
-    return null;
-  }
-
-  if(isEmpty(siteSelectorId)){
-    logger.error("siteSelectorId not set in config.");
-    return null;
-  }
-
-  let redeemMutex = redeemMutexes[code];
-  if(!redeemMutex){
-    redeemMutexes = LimitObjectProperties(redeemMutexes,MAX_CACHED_ITEMS);
-    redeemMutex = new Mutex();
-    redeemMutexes[code] = redeemMutex;
-  }
-
-  const release = await redeemMutex.acquire();
-  let fabric = new Fabric;
-  let encryptedPrivateKey = "";
-  let siteId = null;
-
-  try{
-    let answer = redeemCodes[code];
-
-    if(answer && answer["siteId"]){
-      siteId = answer["siteId"];
-    }
-    if(!force && siteId){
-      release();
-      return siteStore[siteId];
-    }
-
-    const hash = Hash(code);
-    await fabric.init({configUrl,privateKey});
-    let client = fabric.client;
-
-    let siteSelector = await client.LatestVersionHash({objectId:siteSelectorId});
-    
-    const isGlobalSelector = (await client.ContentObjectMetadata({
-      versionHash: siteSelector,
-      metadataSubtree: "public/site_selector_type"
-    })) === "global";
-
-
-    let codeInfo;
-    if(isGlobalSelector) {
-      // Get unresolved meta to determine length of selector list
-      const selectorList = await client.ContentObjectMetadata({
-        versionHash: siteSelector,
-        metadataSubtree: "public/site_selectors"
-      });
-
-      for(let i = 0; i < selectorList.length; i++) {
-        try{
-          codeInfo = await client.ContentObjectMetadata({
-            versionHash: siteSelector,
-            metadataSubtree: `public/site_selectors/${i}/${hash}`
-          });
-        }catch(e){
-          console.error("Error getting codeInfo: " + e);
-        }
-
-        if(codeInfo && codeInfo.ak) {
-          break;
-        }
-      }
-    } else {
-      codeInfo = await client.ContentObjectMetadata({
-        versionHash: siteSelector,
-        metadataSubtree: `public/codes/${hash}`
-      });
-    }
-
-    if(!codeInfo || !codeInfo.ak) {
-      throw "No codeInfo.";
-    }
-
-    siteId = codeInfo.sites[0].siteId; 
-    encryptedPrivateKey = atob(codeInfo.ak);
-
-  }catch(e){
-    logger.error("Error reading site selector: " + JQ(e));
-    release();
-    return null;
-  }
-
-  try {
-    await fabric.initFromEncrypted({configUrl, encryptedPrivateKey, password: code});
-    let newSite = new Site({fabric, siteId});
-    await newSite.loadSite();
-    siteStore[siteId] = newSite;
-    redeemCodes[code] = {siteId,network};
-    release();
-    return newSite;
-  } catch (error) {
-    logger.error("Error redeeming code:" + JQ(error));
-    release();
-    return null;
-  }
-}
-
 const main = async () => {
   let serverHost = Config.serverHost;
   let serverPort = Config.serverPort || 4001;
   let updateInterval = Config.updateInterval || 60000;
-  let privateKey = process.env.PRIVATEKEY;
-
-  if(isEmpty(privateKey)){
-    let error = "Please 'export PRIVATEKEY=XXXX' before running.";
-    logger.error(error);
-    console.error(error);
-    process.exit(1);
-  }
 
   app.engine('hbs', exbars({defaultLayout: false}));
   app.set('view engine', 'hbs');
   app.set('views', path.join(__dirname, '/views'));
-
-  refreshSites();
-  //Refresh the Site every updateInterval
-  setInterval(()=>{refreshSites()}, updateInterval);
 
   app.get('/settings.hbs', function(req, res) {
     requestsLock
@@ -392,7 +244,7 @@ const main = async () => {
         playlists: playlists,
         titles: titles,
         eluvio_logo: serverHost + "/logo.png",
-        site_index: code,
+        code,
         site_id: site.siteId,
         site_info: JSON.stringify(site_info),
         date,
@@ -409,54 +261,20 @@ const main = async () => {
   });
 
 
-  //Serve the site tvml template
-  app.get(['/site.hbs/:network/:index','/watch.hbs/:network/:index'], async function(req, res) {
-    const [value, release] = await requestsLock.acquire();
-
-    try {
-      let view = req.path.split('.').slice(0, -1).join('.').substr(1);
-      let index = req.params.index;
-      let network = req.params.network;
-      let sites = networkSites[network];
-      let site = sites[index];
-      let titles = site.siteInfo.titles || [];
-      let playlists = site.siteInfo.playlists || [];
-      let titleColor = "rgb(236,245,255)";
-      const params = {
-        title_logo: site.siteInfo.title_logo,
-        main_background: site.siteInfo.main_background,
-        title_color: titleColor,
-        display_title: site.display_title,
-        playlists: playlists,
-        titles: titles,
-        eluvio_logo: serverHost + "/logo.png",
-        site_index: index,
-        site_id: site.siteId,
-        network,
-        date
-      };
-
-      res.set('Cache-Control', 'no-cache');
-      res.render(view, params);
-    }catch(e){
-      console.error(e);
-      var template = '<document><loadingTemplate><activityIndicator><text>Error Fetching Site.</text></activityIndicator></loadingTemplate></document>';
-      res.send(template, 404);
-    }finally {
-      release();
-    }
-  });
-
   //Serve the title details from versionHash tvml template
-  app.get('/details.hbs/:siteId/:id', async function(req, res) {
+  app.get('/details.hbs/:network/:code/:id', async function(req, res) {
     const [value, release] = await requestsLock.acquire();
 
     try {
       let view = req.path.split('.').slice(0, -1).join('.').substr(1);
-      let siteId = req.params.siteId;
+      let code = req.params.code;
       let id = req.params.id;
-      let title = getTitle({siteId,id});
-      let site = siteStore[siteId];
+      let network = req.params.network;
+      let site = await redeemCode2(Config.networks[network],code,false);
+      let title = site.getTitle({id});
+      if(!title){
+        throw "title does not exist: " + id;
+      }
 
       let director = "";
       let genre = "";
@@ -475,7 +293,7 @@ const main = async () => {
         }
         offerings = title.availableOfferings || {};
       }catch(e){
-        console.error(e);
+
       }
 
       try {
@@ -514,7 +332,7 @@ const main = async () => {
       let posterUrl = title.posterUrl;
 
       const params = {
-        siteId,
+        code,
         titleId:id,
         director,
         genre,
@@ -536,8 +354,7 @@ const main = async () => {
       res.render(view, params);
     }catch(e){
       logger.error(e);
-      var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
-      res.send(template, 404);
+      res.send("Could not find title.", 404);
     }finally {
       release();
     }
@@ -559,7 +376,7 @@ const main = async () => {
       res.set('Cache-Control', 'no-cache');
       res.render('networks', params);
     }catch(e){
-      console.error(e);
+
       var template = '<document><loadingTemplate><activityIndicator><text>Server Busy. Restart application.</text></activityIndicator></loadingTemplate></document>';
       res.send(template, 404);
     }finally {
@@ -591,7 +408,7 @@ const main = async () => {
       res.set('Cache-Control', 'no-cache');
       res.render("sites", params);
     }catch(e){
-        console.error(e);
+
         var template = '<document><loadingTemplate><activityIndicator><text>Could not load sites view.</text></activityIndicator></loadingTemplate></document>';
         res.send(template, 404);
     }finally {
@@ -643,13 +460,17 @@ const main = async () => {
   });
 
   //Serve playoutUrl
-  app.get('/title/videoUrl/:siteId/:id/:offeringId', async function(req, res) {
+  app.get('/title/videoUrl/:network/:code/:id/:offeringId', async function(req, res) {
     const [value, release] = await requestsLock.acquire();
     try{
-      let siteId = req.params.siteId;
+      let code = req.params.code;
       let id = req.params.id;
       let offeringId = req.params.offeringId;
-      let title = getTitle({siteId,id});
+      let network = req.params.network;
+
+      let site = await redeemCode2(Config.networks[network],code,false);
+      let title = site.getTitle({id});
+
       if(!title){
         throw "title does not exist: " + id;
       }

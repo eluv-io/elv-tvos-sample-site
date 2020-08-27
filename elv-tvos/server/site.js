@@ -289,6 +289,10 @@ class Site {
     return newAvailableOfferings;
   }
 
+  getTitle({id}) {
+    return this.titleStore[id];
+  }
+
   async imageLinks({baseLinkUrl, versionHash, images}) {
     images = images || {};
 
