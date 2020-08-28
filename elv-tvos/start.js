@@ -146,7 +146,7 @@ const redeemCode2 = async (network,code, force=false) => {
     site = newSite;
 
   }catch(e){
-    logger.error("Error reading site selector: " + JQ(e));
+    logger.error("Error reading site selector: " + e);
   }finally{
     release();
     redeemCodesMutex.release();
@@ -448,7 +448,7 @@ const main = async () => {
     try{
       fs.readFile('./package.json', 'utf8', function (err,info) {
         if (err) {
-          logger.error(JQ(err));
+          logger.error(err);
           res.send(err, 404);
           return err;
         }
