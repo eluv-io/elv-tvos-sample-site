@@ -14,7 +14,7 @@ var Mutex = require('async-mutex').Mutex;
 var Semaphore = require('async-mutex').Semaphore;
 const { ElvClient } = require('@eluvio/elv-client-js/src/ElvClient');
 const morgan = require('morgan');
-var rfs = require('rotating-file-stream')
+var rfs = require('rotating-file-stream');
 
 const MAX_CACHED_ITEMS = 100;
 const MAX_REQUESTS = 500;
@@ -53,7 +53,6 @@ const Hash = (code) => {
 };
 
 const redeemCode2 = async (network,code, force=false) => {
-
   let configUrl = network.configUrl;
   if(isEmpty(configUrl)){
     logger.error("RedeemCode: configUrl not set in config.");
@@ -81,6 +80,7 @@ const redeemCode2 = async (network,code, force=false) => {
   let site = null;
   let siteId = null;
   let fabric = null;
+  let isError = false;
   try{
     redeemCodesMutex.acquire();
     let answer = redeemCodes[code];
@@ -147,9 +147,21 @@ const redeemCode2 = async (network,code, force=false) => {
 
   }catch(e){
     logger.error("Error reading site selector: " + e);
+    console.log("Error: " + e);
+    isError = true;
   }finally{
     release();
     redeemCodesMutex.release();
+    redeemMutexesMutex.release();
+  }
+
+  if(isError){
+    redeemCodesMutex.acquire();
+    delete redeemCodes[code];
+    redeemCodesMutex.release();
+
+    redeemMutexesMutex.acquire();
+    delete redeemMutexes[code];
     redeemMutexesMutex.release();
   }
 
