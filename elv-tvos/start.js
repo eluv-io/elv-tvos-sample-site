@@ -15,6 +15,7 @@ var Semaphore = require('async-mutex').Semaphore;
 const { ElvClient } = require('@eluvio/elv-client-js/src/ElvClient');
 const morgan = require('morgan');
 var rfs = require('rotating-file-stream');
+const { performance } = require('perf_hooks');
 
 const MAX_CACHED_ITEMS = 100;
 const MAX_REQUESTS = 500;
@@ -53,6 +54,8 @@ const Hash = (code) => {
 };
 
 const redeemCode2 = async (network,code, force=false) => {
+  const t0 = performance.now();
+  logger.info("Redeem start.");
   let configUrl = network.configUrl;
   if(isEmpty(configUrl)){
     logger.error("RedeemCode: configUrl not set in config.");
@@ -72,6 +75,7 @@ const redeemCode2 = async (network,code, force=false) => {
     redeemMutex = new Mutex();
     redeemMutexesMutex.acquire();
     redeemMutexes[code] = redeemMutex;
+    logger.info("Created new mutex for code.");
     redeemMutexesMutex.release();
   }
 
@@ -91,32 +95,55 @@ const redeemCode2 = async (network,code, force=false) => {
       siteId = answer["siteId"];
     }
     if(force || !fabric || !siteId){
+      logger.info("ElvClient.FromConfigurationUrl start.");
+      let f0 = performance.now();
       // Redeem the ticket
       const client = await ElvClient.FromConfigurationUrl({
         configUrl
       });
+      let f1 = performance.now();
+      logger.info(`ElvClient.FromConfigurationUrl finished. ${f1 - f0} ms`);
       // client.ToggleLogging(true);
+
+      logger.info("ElvClient GenerateWallet AddAccountFromMnemonic SetSigner start.");
+      f0 = performance.now();
 
       const wallet = client.GenerateWallet();
       const signer = wallet.AddAccountFromMnemonic({mnemonic:wallet.GenerateMnemonic()});
       client.SetSigner({signer});
+      f1 = performance.now();
+      logger.info(`ElvClient GenerateWallet AddAccountFromMnemonic SetSigner finished. ${f1 - f0} ms`);
 
       //Get the issuer
       let prefix = code.substr(0,3);
       let accessCode = code.substr(3);
 
+      logger.info("ElvClient LatestVersionHashstart.");
+      f0 = performance.now();
+
       let siteSelectorHash = await client.LatestVersionHash({objectId: siteSelectorId});
+      f1 = performance.now();
+      logger.info(`ElvClient LatestVersionHashstart finished. ${f1 - f0} ms`);
+
+      logger.info("ElvClient ContentObjectMetadata.");
+      f0 = performance.now();
       let meta = await client.ContentObjectMetadata({
         versionHash: siteSelectorHash,
         metadataSubtree: "public/sites"
       });
+      f1 = performance.now();
+      logger.info(`ElvClient ContentObjectMetadata finished. ${f1 - f0} ms`);
 
       let issuer = meta[prefix].issuer;
 
+      logger.info("ElvClient RedeemCode.");
+      f0 = performance.now();
       siteId = await client.RedeemCode({
         issuer,
         code: accessCode
       });
+      f1 = performance.now();
+      logger.info(`ElvClient RedeemCode finished. ${f1 - f0} ms`);
 
       fabric = new Fabric;
       await fabric.initFromClient({client});
@@ -126,6 +153,8 @@ const redeemCode2 = async (network,code, force=false) => {
         try{
           redeemCodesMutex.acquire();
           delete redeemCodes[code];
+          var size = Object.keys(redeemCodes).length
+          logger.info("Deleted from cache. Cached items: " + size);
           redeemCodesMutex.release();
 
           redeemMutexesMutex.acquire();
@@ -138,10 +167,17 @@ const redeemCode2 = async (network,code, force=false) => {
       CACHE_EXPIRE_DURATION_MS);
     }
 
+    logger.info("Get Site / Titles Info start.");
+    f0 = performance.now();
     let newSite = new Site({fabric, siteId});
     await newSite.loadSite();
+    f1 = performance.now();
+    logger.info(`Get Site / Titles Info finished. ${f1 - f0} ms`);
+
     redeemCodesMutex.acquire();
     redeemCodes[code] = {siteId, fabric, network};
+    var size = Object.keys(redeemCodes).length
+    logger.info("Added to cache. Cached items: " + size);
     redeemCodesMutex.release();
     site = newSite;
 
@@ -158,13 +194,16 @@ const redeemCode2 = async (network,code, force=false) => {
   if(isError){
     redeemCodesMutex.acquire();
     delete redeemCodes[code];
+    var size = Object.keys(redeemCodes).length
+    logger.info("Deleted from cache. Cached items: " + size);
     redeemCodesMutex.release();
 
     redeemMutexesMutex.acquire();
     delete redeemMutexes[code];
     redeemMutexesMutex.release();
   }
-
+  const t1 = performance.now();
+  logger.info(`Redeem finished. ${t1 - t0} ms.`);
   return site;
 }
 
