@@ -214,16 +214,63 @@ function replaceTemplate(text) {
   return document;
 }
 
-function playMedia(mediaURL, mediaType) {
+function playMedia(id, mediaURL, mediaType) {
   var singleMediaItem = new MediaItem(mediaType, mediaURL);
+  let resumeTime = 0;
+  if (localStorage) {
+    let timeInfo = {time:0};
+    try{
+      let resumeString = localStorage.getItem('resume');
+      resume = JSON.parse(resumeString);
+      console.log("Retrieved resume info: " + JSON.stringify(resume));
+      timeInfo = resume[id];
+      if(timeInfo && timeInfo.time){
+        console.log("Found resume info for id: " + id + " : " + JSON.stringify(timeInfo));
+        resumeTime = timeInfo.time;
+      }
+    }catch(e){
+      console.error(e);
+    }
+  }
+
+  singleMediaItem.resumeTime = resumeTime;
   var mediaList = new Playlist();
 
   mediaList.push(singleMediaItem);
   var myPlayer = new Player();
+
   myPlayer.addEventListener('stateDidChange', (event) => {
+    console.log('stateDidChange ' + JSON.stringify(event,null,2));
     if (event.state == 'end') {
+
     }
   });
+
+  myPlayer.addEventListener("timeDidChange", function (event) {
+    console.log('timeDidChange ' + JSON.stringify(event,null,2));
+    if (localStorage) {
+      let resume = {};
+      try{
+        let resumeString = localStorage.getItem('resume');
+        resume = JSON.parse(resumeString);
+        if(Object.keys(resume).length > 100){
+          console.log("Trimming resume object.");
+          delete resume[Object.keys(resume)[0]];
+        }
+        console.log("Retrieved resume info: " + JSON.stringify(resume));
+      }catch(e){
+        console.error(e);
+      }
+      try{
+        resume[id] = {timeStamp:event.timeStamp, time:event.time};
+        localStorage.setItem('resume', JSON.stringify(resume));
+        console.log("Stored resume info " + id + " : " + JSON.stringify(resume));
+      }catch(e){
+        console.error(e);
+      }
+    }
+  }, {interval: 1});
+
   myPlayer.playlist = mediaList;
   myPlayer.play();
 }
@@ -235,7 +282,7 @@ async function playOffering(siteIndex, titleId, offeringKey){
     let json = await getJSON(url);
     let videoUrl = json.videoUrl.replace('\{\{\{host\}\}\}',currentHost);
     videoUrl = videoUrl.replace('\{\{params\}\}',getQueryParams());
-    playMedia(videoUrl,'video');
+    playMedia(titleId, videoUrl,'video');
     dismissModal();
   } catch (e) {
     dismissModal();
