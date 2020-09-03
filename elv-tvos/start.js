@@ -6,128 +6,137 @@ var {Site, AllTitles} = require('./server/site');
 var Config = require('./config.json');
 var path = require('path');
 var atob = require('atob');
-var {JQ,isEmpty,CreateID,RandomInt} = require('./server/utils')
+var {JQ,isEmpty,CreateID} = require('./server/utils')
 var fs = require('fs');
 var logger = require('./server/logger');
-var Sugar = require('sugar');
 var Mutex = require('async-mutex').Mutex;
 var Semaphore = require('async-mutex').Semaphore;
 const { ElvClient } = require('@eluvio/elv-client-js/src/ElvClient');
 const morgan = require('morgan');
 var rfs = require('rotating-file-stream');
+var LRU = require("lru-cache")
 const { performance } = require('perf_hooks');
 
-const MAX_CACHED_ITEMS = 100;
-const MAX_REQUESTS = 500;
-const CACHE_EXPIRE_DURATION_MS = 1000*60*60*2;
+const MAX_CACHED_ITEMS = Config.maxCacheItems || 2000;
+const MAX_REQUESTS = Config.maxRequests || 500;
+const CACHE_EXPIRE_DURATION_MS = Config.cacheExpiration || 1000*60*60*2;
 
-const refreshSitesLock = new Mutex();
 const requestsLock = new Semaphore(MAX_REQUESTS);
-const redeemCodesMutex = new Mutex();
-const redeemMutexesMutex = new Mutex();
+const clientCacheMutex = new Mutex();
+const cacheOptions = { max: MAX_CACHED_ITEMS, maxAge: CACHE_EXPIRE_DURATION_MS }
+const clientCache = new LRU(cacheOptions);
 
 var app = express();
 
 var networkSites = {};
-var redeemCodes = {};
-var redeemMutexes = {};
 var date = "";
 
-const LimitObjectProperties = (obj, max) => {
-  if(!obj || max <= 0){
-    return obj;
-  }
+var backendClients = {};
 
-  let keys = Object.keys(obj);
-  let length = keys.length;
-  if(length > max){
-    let randKey = keys[RandomInt(max)];
-    delete obj[randKey];
-  }
-
-  return obj;
+const logMem = () => {
+  logger.info("Memory Usage: " + JQ(process.memoryUsage()));
 }
 
-const Hash = (code) => {
-  const chars = code.split("").map(code => code.charCodeAt(0));
-  return chars.reduce((sum, char, i) => (chars[i + 1] ? (sum * 2) + char * chars[i+1] * (i + 1) : sum + char), 0).toString();
-};
+const init = async (network) => {
+  let f0 = performance.now();
+  logger.info("Init start. Setting backend client for network: " + network);
+  try{
+    let configUrl = Config.networks[network].configUrl;
+    let backendClient = await ElvClient.FromConfigurationUrl({
+      configUrl
+    });
+    const wallet = backendClient.GenerateWallet();
+    const signer = wallet.AddAccountFromMnemonic({mnemonic:wallet.GenerateMnemonic()});
+    backendClient.SetSigner({signer});
+    backendClients[network] = backendClient;
+    logMem();
+    let f1 = performance.now();
+    logger.info(`Init finished. ${f1 - f0} ms`);
+  }catch(e){
+    logger.error("Error intializing backend client. " + e)
+  }
+}
 
 const redeemCode2 = async (network,code, force=false) => {
   const t0 = performance.now();
-  logger.info("Redeem start.");
-  let configUrl = network.configUrl;
+  logger.info("Redeem start. " + network + " force: " + force);
+  
+  let configUrl = Config.networks[network].configUrl;
+  let staticToken = Config.networks[network].staticToken;
+  let siteSelectorId = Config.networks[network].siteSelectorId;
+  let backendClient = backendClients[network];
+
+  if(isEmpty(backendClient)){
+    logger.error("RedeemCode: backendClient not found for network: " + network);
+    return null;
+  }
+
   if(isEmpty(configUrl)){
     logger.error("RedeemCode: configUrl not set in config.");
     return null;
   }
 
-  let siteSelectorId = network.siteSelectorId;
   if(isEmpty(siteSelectorId)){
     logger.error("siteSelectorId not set in config.");
     return null;
   }
 
-  redeemMutexesMutex.acquire();
-  let redeemMutex = redeemMutexes[code];
-  redeemMutexesMutex.release();
-  if(!redeemMutex){
-    redeemMutex = new Mutex();
-    redeemMutexesMutex.acquire();
-    redeemMutexes[code] = redeemMutex;
-    logger.info("Created new mutex for code.");
-    redeemMutexesMutex.release();
-  }
-
-  const release = await redeemMutex.acquire();
-
   let site = null;
   let siteId = null;
   let fabric = null;
   let isError = false;
+  let cache = null;
+  let redeemMutex = null;
+  let client = null;
+
   try{
-    redeemCodesMutex.acquire();
-    let answer = redeemCodes[code];
-    redeemCodesMutex.release();
+    client = await ElvClient.FromConfigurationUrl({
+      configUrl,
+      staticToken
+    });
+  }catch(e){
+    logger.error("Error initiating client. " + e);
+    return null;
+  }
 
-    if(answer && answer["fabric"]){
-      fabric = answer["fabric"];
-      siteId = answer["siteId"];
+  try{
+    clientCacheMutex.acquire();
+    cache = clientCache.get(code);
+    clientCacheMutex.release();
+
+    if(cache && cache["fabric"] && cache["siteId"]){
+      fabric = cache["fabric"];
+      siteId = cache["siteId"];
+      redeemMutex = cache["redeemMutex"];
+      logger.info("Found in cache.");
     }
+  }catch(e){
+    logger.error("Error getting mutex. " + e);
+    return null;
+  }
+
+  if(!redeemMutex){
+    redeemMutex = new Mutex();
+  }
+  redeemMutex.acquire();
+
+  try{
     if(force || !fabric || !siteId){
-      logger.info("ElvClient.FromConfigurationUrl start.");
-      let f0 = performance.now();
-      // Redeem the ticket
-      const client = await ElvClient.FromConfigurationUrl({
-        configUrl
-      });
-      let f1 = performance.now();
-      logger.info(`ElvClient.FromConfigurationUrl finished. ${f1 - f0} ms`);
-      // client.ToggleLogging(true);
-
-      logger.info("ElvClient GenerateWallet AddAccountFromMnemonic SetSigner start.");
-      f0 = performance.now();
-
-      const wallet = client.GenerateWallet();
-      const signer = wallet.AddAccountFromMnemonic({mnemonic:wallet.GenerateMnemonic()});
-      client.SetSigner({signer});
-      f1 = performance.now();
-      logger.info(`ElvClient GenerateWallet AddAccountFromMnemonic SetSigner finished. ${f1 - f0} ms`);
 
       //Get the issuer
       let prefix = code.substr(0,3);
       let accessCode = code.substr(3);
 
-      logger.info("ElvClient LatestVersionHashstart.");
+      logger.info(`ElvClient LatestVersionHash start. objectId ${siteSelectorId}`);
       f0 = performance.now();
 
-      let siteSelectorHash = await client.LatestVersionHash({objectId: siteSelectorId});
+      let siteSelectorHash = await backendClient.LatestVersionHash({objectId: siteSelectorId});
       f1 = performance.now();
-      logger.info(`ElvClient LatestVersionHashstart finished. ${f1 - f0} ms`);
+      logger.info(`ElvClient LatestVersionHash finished.  Result: ${siteSelectorHash}\n${f1 - f0} ms`);
 
-      logger.info("ElvClient ContentObjectMetadata.");
+      logger.info(`ElvClient ContentObjectMetadata. versionHash ${siteSelectorHash}`);
       f0 = performance.now();
-      let meta = await client.ContentObjectMetadata({
+      let meta = await backendClient.ContentObjectMetadata({
         versionHash: siteSelectorHash,
         metadataSubtree: "public/sites"
       });
@@ -136,35 +145,17 @@ const redeemCode2 = async (network,code, force=false) => {
 
       let issuer = meta[prefix].issuer;
 
-      logger.info("ElvClient RedeemCode.");
+      logger.info(`ElvClient RedeemCode. Prefix: ${prefix}, Issuer: ${issuer}`);
       f0 = performance.now();
       siteId = await client.RedeemCode({
         issuer,
         code: accessCode
       });
       f1 = performance.now();
-      logger.info(`ElvClient RedeemCode finished. ${f1 - f0} ms`);
+      logger.info(`ElvClient RedeemCode finished. Result: ${siteId}\n${f1 - f0} ms`);
 
       fabric = new Fabric;
       await fabric.initFromClient({client});
-
-      //Kill the cache after expiration time
-      setTimeout(()=>{
-        try{
-          redeemCodesMutex.acquire();
-          delete redeemCodes[code];
-          var size = Object.keys(redeemCodes).length
-          logger.info("Deleted from cache. Cached items: " + size);
-          redeemCodesMutex.release();
-
-          redeemMutexesMutex.acquire();
-          delete redeemMutexes[code];
-          redeemMutexesMutex.release();
-        }catch(e){
-          logger.error(e);
-        }
-      }, 
-      CACHE_EXPIRE_DURATION_MS);
     }
 
     logger.info("Get Site / Titles Info start.");
@@ -174,33 +165,26 @@ const redeemCode2 = async (network,code, force=false) => {
     f1 = performance.now();
     logger.info(`Get Site / Titles Info finished. ${f1 - f0} ms`);
 
-    redeemCodesMutex.acquire();
-    redeemCodes[code] = {siteId, fabric, network};
-    var size = Object.keys(redeemCodes).length
-    logger.info("Added to cache. Cached items: " + size);
-    redeemCodesMutex.release();
+    clientCacheMutex.acquire();
+    clientCache.set(code,{siteId, fabric, network, redeemMutex});
+    logger.info("Added to cache. Cache length: " + clientCache.length);
+    logMem();
+    clientCacheMutex.release();
     site = newSite;
-
   }catch(e){
-    logger.error("Error reading site selector: " + e);
-    console.log("Error: " + e);
+    logger.error(e);
     isError = true;
   }finally{
-    release();
-    redeemCodesMutex.release();
-    redeemMutexesMutex.release();
+    clientCacheMutex.release();
+    redeemMutex.release();
   }
 
   if(isError){
-    redeemCodesMutex.acquire();
-    delete redeemCodes[code];
-    var size = Object.keys(redeemCodes).length
-    logger.info("Deleted from cache. Cached items: " + size);
-    redeemCodesMutex.release();
-
-    redeemMutexesMutex.acquire();
-    delete redeemMutexes[code];
-    redeemMutexesMutex.release();
+    clientCacheMutex.acquire();
+    clientCache.del(code);
+    logger.info("Removed from cache. Cache length: " + clientCache.length);
+    clientCacheMutex.release();
+    logMem();
   }
   const t1 = performance.now();
   logger.info(`Redeem finished. ${t1 - t0} ms.`);
@@ -208,9 +192,14 @@ const redeemCode2 = async (network,code, force=false) => {
 }
 
 const main = async () => {
+  logger.info("Using config: " + JQ(Config));
   let serverHost = Config.serverHost;
   let serverPort = Config.serverPort || 4001;
   let updateInterval = Config.updateInterval || 60000;
+
+  for(let network in Config.networks){
+    await init(network);
+  }
 
   app.engine('hbs', exbars({defaultLayout: false}));
   app.set('view engine', 'hbs');
@@ -293,7 +282,7 @@ const main = async () => {
 
       let site = null;
 
-      site = await redeemCode2(Config.networks[network], code);
+      site = await redeemCode2(network, code);
       if(!site){
         throw "Could not get Site from code: " + code;
       }
@@ -347,7 +336,7 @@ const main = async () => {
       let code = req.params.code;
       let id = req.params.id;
       let network = req.params.network;
-      let site = await redeemCode2(Config.networks[network],code,false);
+      let site = await redeemCode2(network,code,false);
       let title = site.getTitle({id});
       if(!title){
         throw "title does not exist: " + id;
@@ -523,7 +512,7 @@ const main = async () => {
       let offeringId = req.params.offeringId;
       let network = req.params.network;
 
-      let site = await redeemCode2(Config.networks[network],code,false);
+      let site = await redeemCode2(network,code,false);
       let title = site.getTitle({id});
 
       if(!title){

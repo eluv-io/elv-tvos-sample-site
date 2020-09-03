@@ -1,5 +1,3 @@
-var Crypto = require("crypto");
-
 module.exports = {
   JQ : obj => JSON.stringify(obj, null, 2),
 
@@ -17,6 +15,4 @@ module.exports = {
   RandomInt: max => {
     return Math.floor(Math.random() * Math.floor(max));
   }
-  
-  
 }

@@ -21,7 +21,8 @@ Create elv-tvos/config.json with your configuration values.
   "networks": {
     "main": {
       "configUrl": "https://main.net955305.contentfabric.io/config",
-      "siteSelectorId": "iq__XXX"
+      "siteSelectorId": "iq__XXX",
+      "staticToken": "eyJxc3BhY2VfaWQiOiJpc3BjMlJVb1JlOWVSMnYzM0hBUlFVVlNwMXJZWHp3MSJ9Cgo="
     },
     "testing": {
       "configUrl": "https://xxxxxx",
@@ -30,7 +31,10 @@ Create elv-tvos/config.json with your configuration values.
   },
   "serverPort": 4001,
   "serverHost": "http://127.0.0.1",
-  "updateInterval": 60000
+  "updateInterval": 60000,
+  "maxCacheItems": 2000,
+  "maxRequests": 500,
+  "cacheExpiration": 7200000
 }
 
 ```
