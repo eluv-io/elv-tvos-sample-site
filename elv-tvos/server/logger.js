@@ -4,8 +4,8 @@ var transport = new (winston.transports.DailyRotateFile)({
     filename: 'elv-tvos-%DATE%.log',
     dirname: './logs',
     datePattern: 'YYYY-MM-DD',
-    maxSize: '100k',
-    maxFiles: '100',
+    maxSize: '100m',
+    maxFiles: '10',
     handleExceptions: true,
     humanReadableUnhandledException: true
 });
