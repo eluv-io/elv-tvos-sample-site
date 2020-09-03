@@ -53,7 +53,7 @@ const init = async (network) => {
     let f1 = performance.now();
     logger.info(`Init finished. ${f1 - f0} ms`);
   }catch(e){
-    logger.error("Error intializing backend client. " + e)
+    logger.error("Error intializing backend client. " + JQ(e));
   }
 }
 
@@ -94,8 +94,9 @@ const redeemCode2 = async (network,code, force=false) => {
       configUrl,
       staticToken
     });
+    client.SetSigner({signer:backendClient.signer});
   }catch(e){
-    logger.error("Error initiating client. " + e);
+    logger.error("Error initiating client. " + JQ(e));
     return null;
   }
 
@@ -111,7 +112,7 @@ const redeemCode2 = async (network,code, force=false) => {
       logger.info("Found in cache.");
     }
   }catch(e){
-    logger.error("Error getting mutex. " + e);
+    logger.error("Error getting mutex. " + JQ(e));
     return null;
   }
 
@@ -172,7 +173,7 @@ const redeemCode2 = async (network,code, force=false) => {
     clientCacheMutex.release();
     site = newSite;
   }catch(e){
-    logger.error(e);
+    logger.error("Error redeeming code and getting site information: " + JQ(e));
     isError = true;
   }finally{
     clientCacheMutex.release();
@@ -193,6 +194,7 @@ const redeemCode2 = async (network,code, force=false) => {
 
 const main = async () => {
   logger.info("Using config: " + JQ(Config));
+
   let serverHost = Config.serverHost;
   let serverPort = Config.serverPort || 4001;
   let updateInterval = Config.updateInterval || 60000;
@@ -320,7 +322,7 @@ const main = async () => {
       res.set('Cache-Control', 'max-age=300');
       res.render(view, params);
     }catch(e){
-      res.send(e, 404);
+      res.send(JQ(e), 404);
     }finally {
       release();
     }
@@ -419,7 +421,7 @@ const main = async () => {
       res.set('Cache-Control', 'no-cache');
       res.render(view, params);
     }catch(e){
-      logger.error(e);
+      logger.error("Error getting details for title. " + JQ(e));
       res.send("Could not find title.", 404);
     }finally {
       release();
@@ -488,7 +490,7 @@ const main = async () => {
     try{
       fs.readFile('./package.json', 'utf8', function (err,info) {
         if (err) {
-          logger.error(err);
+          logger.error("Error reading package file." + JQ(err));
           res.send(err, 404);
           return err;
         }
@@ -496,7 +498,7 @@ const main = async () => {
         res.send(json.version);
       });
     }catch(err){
-      logger.error("Could not read package.json "+ err);
+      logger.error("Could not read package.json "+ JQ(err));
       res.send(err, 404);
     }finally {
       release();
@@ -524,7 +526,7 @@ const main = async () => {
       };
       res.send(info);
     }catch(err){
-      logger.error("Could not get title url: " +err);
+      logger.error("Could not get title url: " + JQ(err));
       res.send(err, 404);
     }finally {
       release();
@@ -543,7 +545,7 @@ const main = async () => {
       res.type('text');
       res.render('application', params);
     }catch(err){
-      logger.error("Error serving application.js "+err);
+      logger.error("Error serving application.js "+ JQ(err));
       res.send(err, 500);
     }finally {
       release();
