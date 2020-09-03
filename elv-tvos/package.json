@@ -1,6 +1,6 @@
 {
   "name": "elv-tvos-site-sample",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,7 @@
   "author": "Eluvio",
   "license": "ISC",
   "dependencies": {
-    "@eluvio/elv-client-js": "git+https://github.com/eluv-io/elv-client-js.git#a66568d6fc09789531ee1c796ac414312ad91db5",
+    "@eluvio/elv-client-js": "git+https://github.com/eluv-io/elv-client-js.git#3.1.2",
     "async-mutex": "^0.2.4",
     "atob": "^2.1.2",
     "exbars": "^1.0.4",
