@@ -16,7 +16,7 @@
     "atob": "^2.1.2",
     "exbars": "^1.0.4",
     "express": "^4.17.1",
-    "express-handlebars": "^4.0.3",
+    "express-handlebars": "^5.3.1",
     "express-hbs": "^2.3.3",
     "firebase-functions": "^3.7.0",
     "git-repo-info": "^2.1.1",
